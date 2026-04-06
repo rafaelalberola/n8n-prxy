@@ -198,6 +198,93 @@ input::placeholder, textarea::placeholder {
 
 textarea { min-height: 90px; }
 
+/* ── STEP 1 INTRO ── */
+.step-intro {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.65;
+  font-size: 0.85rem;
+  color: #bbb;
+}
+
+.step-intro strong { color: var(--text); font-weight: 600; }
+.step-intro em { color: var(--accent); font-style: normal; font-weight: 500; }
+
+/* ── CHARACTER LIBRARY ── */
+.library-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 0.75rem;
+}
+
+.char-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.char-card:hover { border-color: var(--border-hover); }
+.char-card.selected { border-color: var(--accent); background: var(--accent-low); }
+
+.char-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+.char-card.selected .char-avatar { background: var(--accent); color: #000; }
+
+.char-name { font-size: 0.88rem; font-weight: 600; display: block; }
+.char-gender { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: block; font-family: 'DM Mono', monospace; }
+
+.library-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  margin-top: 0.75rem;
+}
+
+.divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.5rem 0;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.divider-or::before,
+.divider-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* ── GENDER TOGGLE ── */
 .gender-row {
   display: grid;
@@ -225,6 +312,14 @@ textarea { min-height: 90px; }
 
 .gender-icon { font-size: 1.5rem; display: block; margin-bottom: 5px; }
 .gender-label { font-size: 0.9rem; font-weight: 600; display: block; }
+
+/* ── NEW CHARACTER SECTION ── */
+.new-char-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1.25rem;
+}
 
 /* ── OPTIONS GRID ── */
 .opts { display: grid; gap: 9px; }
@@ -678,24 +773,41 @@ textarea { min-height: 90px; }
 
     <!-- STEP 1: Personaje -->
     <div class="step active" data-step="1">
-      <div class="q">¿Quién protagoniza?</div>
-      <div class="qhint">Nombre del personaje · nuevo o existente en tu library</div>
-      <div class="field">
-        <input type="text" id="nombre_sujeto" placeholder="ej. Sofia, Carlos, Elena..." autocomplete="off" spellcheck="false">
-        <div class="err" id="err1">El nombre es obligatorio</div>
+      <div class="q">Elige tu personaje</div>
+      <div class="qhint">La IA creará un actor virtual que protagonizará tu vídeo</div>
+
+      <div class="step-intro">
+        Cada vídeo tiene un <strong>personaje IA</strong> — una persona generada por inteligencia artificial que aparece en pantalla, habla y actúa como un actor real. <em>Tú no grabas nada.</em><br><br>
+        Puedes elegir uno que ya hayas creado o crear uno nuevo con solo un nombre.
       </div>
-      <div class="section-title">Género del personaje</div>
-      <div class="gender-row">
-        <div class="gender-btn" data-gender="mujer" onclick="selectGender('mujer')">
-          <span class="gender-icon">♀</span>
-          <span class="gender-label">Mujer</span>
+
+      <div class="section-title">Tu library de personajes</div>
+      <div class="library-grid" id="charLibrary"></div>
+      <div class="library-empty" id="charLibraryEmpty" style="display:none">
+        Aún no tienes personajes. Crea el primero abajo.
+      </div>
+
+      <div class="divider-or">o crea uno nuevo</div>
+
+      <div class="new-char-section">
+        <div class="field">
+          <input type="text" id="nombre_sujeto" placeholder="Nombre del personaje — ej. Sofia, Carlos, Elena..." autocomplete="off" spellcheck="false">
         </div>
-        <div class="gender-btn" data-gender="hombre" onclick="selectGender('hombre')">
-          <span class="gender-icon">♂</span>
-          <span class="gender-label">Hombre</span>
+        <div class="section-title">Género del personaje</div>
+        <div class="gender-row">
+          <div class="gender-btn" data-gender="mujer" onclick="selectGender('mujer')">
+            <span class="gender-icon">♀</span>
+            <span class="gender-label">Mujer</span>
+          </div>
+          <div class="gender-btn" data-gender="hombre" onclick="selectGender('hombre')">
+            <span class="gender-icon">♂</span>
+            <span class="gender-label">Hombre</span>
+          </div>
         </div>
       </div>
-      <div class="err" id="err1b">Selecciona un género</div>
+
+      <div class="err" id="err1">Elige un personaje de tu library o escribe un nombre nuevo</div>
+      <div class="err" id="err1b">Selecciona un género para el nuevo personaje</div>
     </div>
 
     <!-- STEP 2: Formato -->
@@ -930,6 +1042,80 @@ let N8N_WEBHOOK_URL = localStorage.getItem('n8n_webhook_url') || DEFAULT_WEBHOOK
 let ANTHROPIC_KEY = sessionStorage.getItem('claude_key') || '';
 // ────────────────────────────────────────────────────────────
 
+// ── CHARACTER LIBRARY (localStorage) ─────────────────────────
+function getCharLibrary() {
+  try { return JSON.parse(localStorage.getItem('char_library') || '[]'); } catch { return []; }
+}
+
+function saveCharToLibrary(name, gender) {
+  const lib = getCharLibrary();
+  const existing = lib.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    existing.gender = gender;
+    existing.lastUsed = Date.now();
+  } else {
+    lib.push({ name, gender, lastUsed: Date.now() });
+  }
+  localStorage.setItem('char_library', JSON.stringify(lib));
+}
+
+let selectedLibChar = null;
+
+function renderCharLibrary() {
+  const lib = getCharLibrary().sort((a, b) => b.lastUsed - a.lastUsed);
+  const grid = document.getElementById('charLibrary');
+  const empty = document.getElementById('charLibraryEmpty');
+
+  if (lib.length === 0) {
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  grid.style.display = 'grid';
+  empty.style.display = 'none';
+  grid.innerHTML = lib.map((c, i) => `
+    <div class="char-card" data-idx="${i}" onclick="selectLibChar(${i})">
+      <div class="char-avatar">${c.gender === 'mujer' ? '♀' : '♂'}</div>
+      <div>
+        <span class="char-name">${c.name}</span>
+        <span class="char-gender">${c.gender}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectLibChar(idx) {
+  const lib = getCharLibrary().sort((a, b) => b.lastUsed - a.lastUsed);
+  const char = lib[idx];
+  if (!char) return;
+
+  selectedLibChar = char;
+  S.nombre_sujeto = char.name;
+  S.genero = char.gender;
+
+  // Highlight selected card
+  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.char-card[data-idx="${idx}"]`).classList.add('selected');
+
+  // Clear new-character inputs to avoid confusion
+  document.getElementById('nombre_sujeto').value = '';
+  document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('selected'));
+
+  // Hide errors
+  document.getElementById('err1').classList.remove('show');
+  document.getElementById('err1b').classList.remove('show');
+}
+
+// When user types in the name field, deselect library card
+document.addEventListener('DOMContentLoaded', () => {
+  renderCharLibrary();
+  document.getElementById('nombre_sujeto').addEventListener('input', () => {
+    selectedLibChar = null;
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+  });
+});
+
 const TOTAL_STEPS = 6;
 let currentStep = 1;
 
@@ -1024,9 +1210,11 @@ function updateProgress() {
 // ── GENDER ────────────────────────────────────────────────
 function selectGender(g) {
   S.genero = g;
+  selectedLibChar = null;
   document.querySelectorAll('.gender-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.gender === g);
   });
+  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
 }
 
 // ── OPTION SELECTION ──────────────────────────────────────
@@ -1177,12 +1365,21 @@ function buildSummary() {
 function validate() {
   const v = {
     1: () => {
-      const name = document.getElementById('nombre_sujeto').value.trim();
-      S.nombre_sujeto = name;
-      const okN = name.length > 0;
+      const nameInput = document.getElementById('nombre_sujeto').value.trim();
+      // Library char selected?
+      if (selectedLibChar) {
+        S.nombre_sujeto = selectedLibChar.name;
+        S.genero = selectedLibChar.gender;
+        document.getElementById('err1').classList.remove('show');
+        document.getElementById('err1b').classList.remove('show');
+        return true;
+      }
+      // New character
+      S.nombre_sujeto = nameInput;
+      const okN = nameInput.length > 0;
       const okG = !!S.genero;
       document.getElementById('err1').classList.toggle('show', !okN);
-      document.getElementById('err1b').classList.toggle('show', !okG);
+      document.getElementById('err1b').classList.toggle('show', okN && !okG);
       return okN && okG;
     },
     2: () => {
@@ -1233,6 +1430,9 @@ function goBack() {
 // ── SUBMIT ────────────────────────────────────────────────
 async function submitForm() {
   if (!validate()) return;
+
+  // Save character to library for future use
+  saveCharToLibrary(S.nombre_sujeto, S.genero);
 
   const payload = {
     nombre_sujeto: S.nombre_sujeto,
