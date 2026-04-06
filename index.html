@@ -237,9 +237,16 @@ textarea { min-height: 90px; }
   flex-shrink: 0;
   color: var(--text);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
-.char-card.selected .char-avatar { background: var(--accent); color: #fff; }
+.char-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.char-card.selected .char-avatar { background: var(--accent); color: #fff; box-shadow: 0 0 0 2px var(--accent); }
 
 .char-name { font-size: 0.9rem; font-weight: 700; display: block; }
 .char-gender { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: block; font-family: 'DM Mono', monospace; }
@@ -1089,7 +1096,7 @@ function renderCharLibrary() {
   empty.style.display = 'none';
   grid.innerHTML = charLibrary.map((c, i) => `
     <div class="char-card" data-idx="${i}" onclick="selectLibChar(${i})">
-      <div class="char-avatar">${c.genero === 'mujer' ? '♀' : '♂'}</div>
+      <div class="char-avatar">${c.foto_referencia ? `<img src="${c.foto_referencia}" alt="${c.nombre}">` : (c.genero === 'mujer' ? '♀' : '♂')}</div>
       <div>
         <span class="char-name">${c.nombre}</span>
         <span class="char-gender">${c.genero}${c.total_runs ? ' · ' + c.total_runs + ' runs' : ''}</span>
