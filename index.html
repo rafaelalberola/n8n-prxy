@@ -1385,8 +1385,8 @@ function validate() {
       const nameInput = document.getElementById('nombre_sujeto').value.trim();
       // Library char selected?
       if (selectedLibChar) {
-        S.nombre_sujeto = selectedLibChar.name;
-        S.genero = selectedLibChar.gender;
+        S.nombre_sujeto = selectedLibChar.nombre;
+        S.genero = selectedLibChar.genero;
         document.getElementById('err1').classList.remove('show');
         document.getElementById('err1b').classList.remove('show');
         return true;
