@@ -761,7 +761,7 @@ textarea { min-height: 100px; }
   </div>
 
   <div class="progress" id="progressBar"></div>
-  <div class="step-label" id="stepLabel">PASO 1 DE 6</div>
+  <div class="step-label" id="stepLabel">PASO 1 DE 5</div>
 
   <div class="card" id="formCard">
 
@@ -939,25 +939,8 @@ textarea { min-height: 100px; }
       <div class="err" id="err4">Selecciona tono visual y cámara</div>
     </div>
 
-    <!-- STEP 5: Script -->
+    <!-- STEP 5: Review -->
     <div class="step" data-step="5">
-      <div class="q">¿Qué dice?</div>
-      <div class="qhint">Elige template o escribe tu propio script</div>
-      <div class="template-chips" id="templateChips"></div>
-      <div class="template-preview" id="templatePreview">—</div>
-      <div class="suggest-row">
-        <div class="ai-badge" id="aiBadge">✦ PERSONALIZADO POR CLAUDE</div>
-        <button class="suggest-btn" id="suggestBtn" onclick="suggestScript()">
-          <span class="suggest-icon">✦</span>
-          <span class="suggest-spinner"></span>
-          Personalizar con IA
-        </button>
-      </div>
-      <textarea id="script_custom" placeholder="O escribe aquí tu propio script..."></textarea>
-    </div>
-
-    <!-- STEP 6: Review -->
-    <div class="step" data-step="6">
       <div class="q">Todo listo</div>
       <div class="qhint">Revisa y lanza el pipeline de producción</div>
       <div class="summary" id="summaryGrid"></div>
@@ -999,6 +982,12 @@ textarea { min-height: 100px; }
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
     <h3>⚙ Configuración</h3>
+
+    <div class="section-title" style="margin-top:0">Producto que vendes</div>
+    <p>Describe tu producto o servicio en 1-2 frases. La IA generará scripts que lo posicionen.</p>
+    <textarea id="productoInput" placeholder="Ej: Formación online para crear avatares IA y escalar contenido para marcas" style="min-height:70px; font-family:'DM Mono',monospace; font-size:0.82rem; margin-bottom:1rem;"></textarea>
+
+    <div class="section-title">Webhook URL</div>
     <p>URL del webhook de n8n · se guarda en este navegador permanentemente</p>
     <input type="text" id="webhookInput" placeholder="https://n8n.prxy.studio/webhook/ai-video-pipeline" spellcheck="false">
     <div class="url-status" id="urlStatus"></div>
@@ -1010,25 +999,12 @@ textarea { min-height: 100px; }
   </div>
 </div>
 
-<!-- Claude Key Modal -->
-<div class="modal-overlay" id="keyModal">
-  <div class="modal">
-    <h3>✦ Conectar Claude</h3>
-    <p>API key de Anthropic para personalizar el script con IA · solo se guarda en esta sesión</p>
-    <input type="password" id="keyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeKeyModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="saveKey()">Conectar →</button>
-    </div>
-    <div class="modal-note">→ console.anthropic.com → API Keys · nunca sale de tu navegador</div>
-  </div>
-</div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const DEFAULT_WEBHOOK = 'https://n8n.prxy.studio/webhook/ai-video-pipeline';
 let N8N_WEBHOOK_URL = localStorage.getItem('n8n_webhook_url') || DEFAULT_WEBHOOK;
-let ANTHROPIC_KEY = sessionStorage.getItem('claude_key') || '';
+let PRODUCTO = localStorage.getItem('producto') || '';
 // ────────────────────────────────────────────────────────────
 
 // ── CHARACTER LIBRARY (Airtable via n8n webhook) ─────────────
@@ -1118,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 let currentStep = 1;
 
 const S = {
@@ -1130,10 +1106,7 @@ const S = {
   localizacion: '',
   hora_dia: '',
   tono_visual: '',
-  camara: '',
-  template_id: '',
-  template_script: '',
-  script_custom: ''
+  camara: ''
 };
 
 // Auto-action per formato
@@ -1145,51 +1118,6 @@ const ACCION_MAP = {
   cta: 'señala a cámara con confianza, luego hacia abajo en gesto swipe-up',
   split: 'expresión neutral al inicio, sorprendida y confiada al final'
 };
-
-// ── TEMPLATES ──────────────────────────────────────────────
-// ── TEMPLATES — calibrados por formato ────────────────────
-// snapchat_hook: 4-6 palabras (1 shot, extreme close-up)
-// hook: 6-10 palabras (1-2 shots, push-in lento)
-// reveal: 15-20 palabras (3 shots con giro)
-// demo: 10-15 palabras (OTS + reacción)
-// cta: 8-12 palabras (señala a cámara)
-// split: 2 frases contrastadas (antes/después)
-const TEMPLATES = {
-  snapchat_hook: [
-    { id: 'sh_para', badge: 'Para', script: 'Para. Esto lo cambia todo.' },
-    { id: 'sh_nadie', badge: 'Nadie sabe', script: 'Nadie sabe esto todavía.' },
-    { id: 'sh_espera', badge: 'Mira', script: 'Espera. Mira esto bien.' },
-    { id: 'sh_real', badge: 'No soy real', script: 'No soy real. Soy IA.' }
-  ],
-  hook: [
-    { id: 'h_secreto', badge: 'El secreto', script: 'Lo que nadie te cuenta sobre crear contenido con inteligencia artificial.' },
-    { id: 'h_descubri', badge: 'Descubrí', script: 'Descubrí algo que lo cambia todo. Y no es lo que piensas.' },
-    { id: 'h_parar', badge: 'Para el scroll', script: 'Para. Respira. Lo que buscas ya existe y nadie te lo dijo.' },
-    { id: 'h_gratis', badge: 'Gratis', script: 'Todo esto lo puedes hacer gratis. Yo te enseño cómo.' }
-  ],
-  reveal: [
-    { id: 'r_noexisto', badge: 'No existo', script: 'Llevo semanas apareciendo en tu feed. Y no soy real. Soy inteligencia artificial. Y lo más loco es que cualquiera puede hacer esto.' },
-    { id: 'r_dato', badge: 'Dato + giro', script: 'El setenta por ciento del contenido que consumes esta semana fue generado con inteligencia artificial. Este vídeo incluido. Bienvenido al futuro.' },
-    { id: 'r_prueba', badge: 'Prueba visual', script: 'Esta cara no existe. Esta voz fue generada. Este entorno fue creado con IA. Todo lo que ves es sintético. Y nadie lo nota.' }
-  ],
-  demo: [
-    { id: 'd_proceso', badge: 'El proceso', script: 'Una idea. Un nombre. Treinta segundos. El sistema genera el personaje, el vídeo y la voz. Tú no grabas nada.' },
-    { id: 'd_numeros', badge: 'Los números', script: 'Un personaje cuesta cero. Un vídeo cuesta un euro. Una cuenta completa al mes, doscientos euros. Eso es escalar.' },
-    { id: 'd_antes', badge: 'Antes y ahora', script: 'Antes necesitabas un equipo de producción. Ahora necesitas cinco euros y una idea. El juego cambió para siempre.' }
-  ],
-  cta: [
-    { id: 'c_link', badge: 'Link en bio', script: 'Si quieres saber cómo funciona esto, link en bio. Antes de que lo borre.' },
-    { id: 'c_seguir', badge: 'Follow', script: 'Sígueme. Esta semana voy a enseñar exactamente cómo funciona, paso a paso.' },
-    { id: 'c_pregunta', badge: 'Pregunta', script: 'Cuántos personajes como yo crees que hay ya activos. Cuéntame en comentarios.' }
-  ],
-  split: [
-    { id: 'sp_antes', badge: 'Antes/después', script: 'Antes: horas editando sin resultados. Ahora: treinta segundos y listo. La diferencia es la IA generativa.' },
-    { id: 'sp_coste', badge: 'Coste', script: 'Opción A: una productora por miles de euros. Opción B: inteligencia artificial por dos euros. El resultado es igual.' },
-    { id: 'sp_real', badge: 'Real vs IA', script: 'Persona real a la izquierda. Inteligencia artificial a la derecha. No puedes distinguirlas. Exacto, ya no puedes.' }
-  ]
-};
-
-let currentTemplateIdx = 0;
 
 // ── PROGRESS BAR ──────────────────────────────────────────
 const progressBar = document.getElementById('progressBar');
@@ -1236,10 +1164,6 @@ document.querySelectorAll('.opts .opt').forEach(opt => {
     this.classList.add('selected');
     const key = group.id;
     S[key] = this.dataset.value;
-    if (key === 'formato_video') {
-      currentTemplateIdx = 0;
-      renderTemplates(S.formato_video);
-    }
   });
 });
 
@@ -1263,97 +1187,10 @@ function toggleFrameFin() {
   desc.classList.toggle('show', S.usar_frame_fin);
 }
 
-// ── TEMPLATES ─────────────────────────────────────────────
-function renderTemplates(format) {
-  const tpls = TEMPLATES[format] || [];
-  const chips = document.getElementById('templateChips');
-  chips.innerHTML = tpls.map((t, i) =>
-    `<div class="chip ${i === 0 ? 'selected' : ''}" onclick="selectTemplate(${i})">${t.badge}</div>`
-  ).join('');
-  if (tpls[0]) {
-    S.template_id = tpls[0].id;
-    S.template_script = tpls[0].script;
-    document.getElementById('templatePreview').textContent = tpls[0].script;
-  }
-}
-
-function selectTemplate(i) {
-  currentTemplateIdx = i;
-  const format = S.formato_video;
-  const tpls = TEMPLATES[format] || [];
-  document.querySelectorAll('#templateChips .chip').forEach((c, idx) => {
-    c.classList.toggle('selected', idx === i);
-  });
-  if (tpls[i]) {
-    S.template_id = tpls[i].id;
-    S.template_script = tpls[i].script;
-    document.getElementById('templatePreview').textContent = tpls[i].script;
-  }
-}
-
-// ── AI SUGGEST ────────────────────────────────────────────
-async function suggestScript() {
-  if (!ANTHROPIC_KEY) { openKeyModal(); return; }
-  const btn = document.getElementById('suggestBtn');
-  btn.classList.add('loading');
-  btn.disabled = true;
-
-  const ctx = [
-    S.formato_video && `Formato: ${S.formato_video}`,
-    S.localizacion && `Localización: ${S.localizacion}`,
-    S.hora_dia && `Luz: ${S.hora_dia}`,
-    S.tono_visual && `Tono visual: ${S.tono_visual}`,
-    document.getElementById('script_custom').value && `Idea: ${document.getElementById('script_custom').value}`
-  ].filter(Boolean).join('\n');
-
-  // Mock mode
-  if (!ANTHROPIC_KEY.startsWith('sk-ant')) {
-    let script = S.template_script || 'Para. Mira esto. Nadie te lo cuenta.';
-    const mocks = { TIEMPO: 'semanas', PORCENTAJE: '73', HERRAMIENTA: 'la IA', RECURSO_CARO: 'un equipo', RECURSO_BARATO: 'cinco euros', PLAZO: 'esta semana', ESTADO_ANTES: 'horas editando', ESTADO_AHORA: 'treinta segundos', DIFERENCIA_CLAVE: 'la IA generativa', OPCION_CARA: 'productora', PRECIO_A: 'miles de euros', PRECIO_B: 'dos euros', PRECIO_PERSONAJE: 'gratis', PRECIO_VIDEO: '1,36€', PRECIO_MES: '200€' };
-    Object.entries(mocks).forEach(([k,v]) => { script = script.replace(new RegExp(`\\[${k}\\]`, 'g'), v); });
-    typeInto('script_custom', script);
-    btn.classList.remove('loading'); btn.disabled = false;
-    return;
-  }
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 250,
-        system: `Eres un experto en contenido UGC viral. Personaliza esta template de script rellenando los [HUECOS] en mayúsculas con 1-4 palabras concretas y naturales. Formato: ${S.formato_video || 'hook'}. Devuelve ÚNICAMENTE el script final, sin explicaciones.`,
-        messages: [{ role: 'user', content: `Template:\n${S.template_script || 'Para. Esto lo cambia todo.'}\n\nContexto:\n${ctx}\n\nRellena los huecos. Solo el texto.` }]
-      })
-    });
-    if (!res.ok) { const e = await res.json(); if (e.error?.type === 'authentication_error') { sessionStorage.removeItem('claude_key'); ANTHROPIC_KEY = ''; openKeyModal(); return; } throw new Error(e.error?.message); }
-    const d = await res.json();
-    const text = d.content?.[0]?.text?.trim();
-    if (text) typeInto('script_custom', text);
-  } catch(e) { alert('Error Claude: ' + e.message); }
-  finally { btn.classList.remove('loading'); btn.disabled = false; }
-}
-
-function typeInto(id, text) {
-  const el = document.getElementById(id);
-  el.value = '';
-  let i = 0;
-  const iv = setInterval(() => {
-    el.value += text[i++];
-    if (i >= text.length) {
-      clearInterval(iv);
-      document.getElementById('aiBadge').classList.add('show');
-      el.style.borderColor = 'rgba(232,255,0,0.4)';
-      setTimeout(() => el.style.borderColor = '', 2000);
-    }
-  }, 15);
-}
 
 // ── SUMMARY ──────────────────────────────────────────────
 function buildSummary() {
   const grid = document.getElementById('summaryGrid');
-  const script = document.getElementById('script_custom').value.trim() || S.template_script || '—';
   const items = [
     ['personaje', `${S.nombre_sujeto} · ${S.genero}`],
     ['formato', S.formato_video],
@@ -1362,7 +1199,7 @@ function buildSummary() {
     ['visual', S.tono_visual?.split(',')[0] || '—'],
     ['cámara', S.camara?.split(',')[0] || '—'],
     ['transición frames', S.usar_frame_fin ? 'Sí — controlada' : 'No — consistencia total'],
-    ['script', script.substring(0, 70) + (script.length > 70 ? '…' : '')]
+    ['producto', PRODUCTO ? PRODUCTO.substring(0, 70) + (PRODUCTO.length > 70 ? '…' : '') : '⚠ Sin definir — ve a ⚙ Configuración']
   ];
   grid.innerHTML = items.map(([k,v]) => `
     <div class="sum-row">
@@ -1410,11 +1247,7 @@ function validate() {
       document.getElementById('err4').classList.toggle('show', !ok);
       return ok;
     },
-    5: () => {
-      S.script_custom = document.getElementById('script_custom').value.trim();
-      return true;
-    },
-    6: () => true
+    5: () => true
   };
   return (v[currentStep] || (() => true))();
 }
@@ -1425,8 +1258,7 @@ function showStep(n) {
   document.querySelector(`[data-step="${n}"]`).classList.add('active');
   currentStep = n;
   updateProgress();
-  if (n === 5 && S.formato_video) { currentTemplateIdx = 0; renderTemplates(S.formato_video); }
-  if (n === 6) buildSummary();
+  if (n === 5) buildSummary();
 }
 
 function goNext() {
@@ -1446,15 +1278,12 @@ async function submitForm() {
     nombre_sujeto: S.nombre_sujeto,
     genero: S.genero,
     formato_video: S.formato_video,
-    tipo_escena: 'interior lifestyle',
     localizacion: S.localizacion,
     hora_dia: S.hora_dia,
     accion: ACCION_MAP[S.formato_video] || 'habla directamente a cámara',
     camara: S.camara,
     tono_visual: S.tono_visual,
-    template_script: S.template_script,
-    script_tts_override: S.script_custom || S.template_script,
-    idea_escena: [S.nombre_sujeto + ' · ' + S.genero, S.formato_video, S.localizacion, S.hora_dia, S.tono_visual].filter(Boolean).join(' · '),
+    producto: PRODUCTO,
     usar_frame_fin: S.usar_frame_fin,
     frame_fin_descripcion: S.frame_fin_descripcion
   };
@@ -1501,6 +1330,7 @@ function animateSteps() {
 // ── SETTINGS ──────────────────────────────────────────────
 function openSettings() {
   document.getElementById('webhookInput').value = N8N_WEBHOOK_URL;
+  document.getElementById('productoInput').value = PRODUCTO;
   updateUrlStatus();
   document.getElementById('settingsModal').classList.add('open');
 }
@@ -1520,6 +1350,10 @@ function saveSettings() {
   if (!url) return;
   N8N_WEBHOOK_URL = url;
   localStorage.setItem('n8n_webhook_url', url);
+  const prod = document.getElementById('productoInput').value.trim();
+  PRODUCTO = prod;
+  if (prod) localStorage.setItem('producto', prod);
+  else localStorage.removeItem('producto');
   closeSettings();
 }
 
@@ -1530,29 +1364,9 @@ function resetUrl() {
   updateUrlStatus();
 }
 
-// ── KEY MODAL ─────────────────────────────────────────────
-function openKeyModal() {
-  document.getElementById('keyModal').classList.add('open');
-  setTimeout(() => document.getElementById('keyInput').focus(), 100);
-}
-
-function closeKeyModal() {
-  document.getElementById('keyModal').classList.remove('open');
-}
-
-function saveKey() {
-  const k = document.getElementById('keyInput').value.trim();
-  if (!k || k.length < 3) { document.getElementById('keyInput').style.borderColor = '#ff4d4d'; setTimeout(() => document.getElementById('keyInput').style.borderColor = '', 1500); return; }
-  ANTHROPIC_KEY = k;
-  sessionStorage.setItem('claude_key', k);
-  closeKeyModal();
-  suggestScript();
-}
-
 // ── KEYBOARD ──────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeSettings(); closeKeyModal(); }
-  if (e.key === 'Enter' && document.getElementById('keyModal').classList.contains('open')) saveKey();
+  if (e.key === 'Escape') { closeSettings(); }
   if (e.key === 'Enter' && document.getElementById('settingsModal').classList.contains('open')) saveSettings();
 });
 
