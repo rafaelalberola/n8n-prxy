@@ -719,6 +719,57 @@ textarea { min-height: 90px; }
 }
 .reset-link:hover { color: var(--text); }
 
+/* ── CREATED CHARACTER CONFIRMATION ── */
+.created-char-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--block-green);
+  border: 2px solid #22c55e;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-top: 1rem;
+  animation: up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.created-char-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.created-char-info { flex: 1; }
+.created-char-name { font-size: 0.92rem; font-weight: 700; display: block; }
+.created-char-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 2px;
+  display: block;
+  line-height: 1.4;
+}
+
+.created-char-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 /* ── CREATE NEW BUTTON ── */
 .create-new-btn {
   display: flex;
@@ -1118,6 +1169,16 @@ textarea { min-height: 90px; }
       </div>
 
       <div class="create-new-btn" onclick="openCreator()">+ Crear personaje nuevo</div>
+
+      <!-- Created character confirmation -->
+      <div class="created-char-card" id="createdCharCard" style="display:none">
+        <div class="created-char-icon" id="createdCharIcon">♀</div>
+        <div class="created-char-info">
+          <span class="created-char-name" id="createdCharName"></span>
+          <span class="created-char-desc" id="createdCharDesc"></span>
+        </div>
+        <span class="created-char-check">✓</span>
+      </div>
 
       <div class="err" id="err1">Elige un personaje de tu library o crea uno nuevo</div>
       <div class="err" id="err1b">Selecciona un género para el nuevo personaje</div>
@@ -1644,6 +1705,20 @@ function confirmCreator() {
   S.avatar_descripcion = buildAvatarDescription();
   selectedLibChar = null;
   closeCreator();
+
+  // Show confirmation card in Step 1
+  const card = document.getElementById('createdCharCard');
+  const icon = document.getElementById('createdCharIcon');
+  const nameEl = document.getElementById('createdCharName');
+  const descEl = document.getElementById('createdCharDesc');
+  icon.textContent = S.genero === 'mujer' ? '♀' : '♂';
+  nameEl.textContent = name;
+  descEl.textContent = S.avatar_descripcion || S.genero;
+  card.style.display = 'flex';
+
+  // Change button text
+  document.querySelector('.create-new-btn').textContent = '↻ Editar personaje';
+
   document.getElementById('err1').classList.remove('show');
   document.getElementById('err1b').classList.remove('show');
 }
