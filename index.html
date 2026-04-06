@@ -1504,15 +1504,19 @@ async function fetchCharLibrary() {
   try {
     const res = await fetch(getSubjectsUrl());
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const text = await res.text();
+    if (!text || !text.trim()) {
+      charLibrary = [];
+      renderCharLibrary();
+      return;
+    }
+    const data = JSON.parse(text);
     charLibrary = data.subjects || [];
     renderCharLibrary();
   } catch (e) {
-    console.warn('[Library] No se pudo cargar:', e.message);
+    console.warn('[Library]', e.message);
     charLibrary = [];
-    grid.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = 'No se pudo conectar con tu servidor n8n. Crea un personaje nuevo abajo.';
+    renderCharLibrary();
   }
 }
 
@@ -1523,7 +1527,7 @@ function renderCharLibrary() {
   if (charLibrary.length === 0) {
     grid.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = 'Aún no tienes personajes. Crea el primero abajo.';
+    empty.textContent = 'Aún no tienes personajes. Crea el primero.';
     return;
   }
 
