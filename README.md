@@ -1,72 +1,177 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# AI Video Studio
 
-# n8n - Secure Workflow Automation for Technical Teams
+**Generate AI-powered short videos with realistic avatars, lipsync, and product-focused scripts — all from a simple web form.**
 
-n8n is a workflow automation platform that gives technical teams the flexibility of code with the speed of no-code. With 400+ integrations, native AI capabilities, and a fair-code license, n8n lets you build powerful automations while maintaining full control over your data and deployments.
+AI Video Studio is a fully automated video generation pipeline that turns a few creative choices into a polished 5-second vertical video (9:16) with an AI avatar speaking naturally to camera. You describe your product once, pick a character, choose a vibe, and the system handles everything: scriptwriting, image generation, video synthesis, voice cloning, and lipsync — delivered straight to Telegram.
 
-![n8n.io - Screenshot](https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-screenshot-readme.png)
+**Cost per video: ~$1.36** | **Generation time: ~6 minutes** | **Zero coding required to operate**
 
-## Key Capabilities
+---
 
-- **Code When You Need It**: Write JavaScript/Python, add npm packages, or use the visual interface
-- **AI-Native Platform**: Build AI agent workflows based on LangChain with your own data and models
-- **Full Control**: Self-host with our fair-code license or use our [cloud offering](https://app.n8n.cloud/login)
-- **Enterprise-Ready**: Advanced permissions, SSO, and air-gapped deployments
-- **Active Community**: 400+ integrations and 900+ ready-to-use [templates](https://n8n.io/workflows)
+## What You Get
 
-## Quick Start
+- **Product-driven AI scripts** — Claude analyzes your product and writes scroll-stopping scripts calibrated to exactly 5 seconds of audio (12-25 words)
+- **Persistent character library** — Create AI avatars once, reuse them across unlimited videos with consistent appearance and voice
+- **6 video formats** — Snapchat Hook, Hook, Reveal, Demo, CTA, and Split — each with 3 pre-built script templates
+- **Realistic lipsync** — WaveSpeed Lipsync-2-pro synchronizes generated speech with avatar mouth movements
+- **Scene control** — Choose location (interior, city, beach, nature, studio, intimate), lighting (morning, golden hour, midday, night), camera style (handheld UGC, extreme close-up, push-in, static), and visual tone (iPhone Raw, Fujifilm UGC, 35mm Kodak, Cinematic)
+- **Frame transitions** — Optional start-to-end pose transitions within a single video
+- **Multi-model fallback** — If a primary AI service is unavailable, the pipeline gracefully degrades through alternative models
+- **Instant delivery** — Final video sent to Telegram with full metadata stored in Airtable
 
-Try n8n instantly with [npx](https://docs.n8n.io/hosting/installation/npm/) (requires [Node.js](https://nodejs.org/en/)):
+---
+
+## How It Works
 
 ```
-npx n8n
+  YOU (Web Form)
+    |
+    v
+ [1] n8n Webhook receives your choices
+    |
+    v
+ [2] Claude Sonnet generates:
+     - TTS script (product-aware, 5s calibrated)
+     - Image prompts for avatar frames
+     - Video motion prompts
+    |
+    v
+ [3] Google Gemini (NanoBanana) generates avatar frames
+     → Uploaded to Cloudinary
+    |
+    v
+ [4] ElevenLabs synthesizes speech with character voice
+     → Uploaded to Cloudinary
+    |
+    v
+ [5] Kling 3.0 generates 5s video from frame + motion prompt
+     (Image-to-Video, 9:16 vertical)
+    |
+    v
+ [6] WaveSpeed lipsync merges audio + video
+    |
+    v
+ [7] Final video → Cloudinary + Airtable + Telegram
 ```
 
-Or deploy with [Docker](https://docs.n8n.io/hosting/installation/docker/):
+---
+
+## Tech Stack
+
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **Frontend** | Vanilla HTML/CSS/JS | 6-step guided wizard (single `index.html`, no dependencies) |
+| **Orchestration** | n8n (self-hosted) | 40+ node workflow managing the full pipeline |
+| **Scriptwriting** | Claude Sonnet 4.6 | Product-aware script + prompt generation |
+| **Image Generation** | Google Gemini (NanoBanana) | Avatar frame generation with reference consistency |
+| **Video Generation** | Kling 3.0 (via PiAPI) | Image-to-video synthesis, 9:16, 5 seconds |
+| **Voice Synthesis** | ElevenLabs | Text-to-speech with cloned character voices |
+| **Lipsync** | WaveSpeed AI | Audio-video mouth synchronization |
+| **Media Storage** | Cloudinary | CDN for all images, audio, and video assets |
+| **Database** | Airtable | Character library + video metadata + run tracking |
+| **Notifications** | Telegram Bot | Instant video delivery to your chat |
+
+---
+
+## Project Structure
 
 ```
-docker volume create n8n_data
-docker run -it --rm --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
+.
+├── index.html                 # Complete web UI (1,494 lines, zero dependencies)
+├── n8n_pipeline_v74.json      # n8n workflow definition (40+ nodes, import-ready)
+├── .env.local.example         # Environment variable template
+├── .devcontainer/             # Docker + PostgreSQL for local n8n development
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── devcontainer.json
+└── .github/                   # CI/CD workflows
 ```
 
-Access the editor at http://localhost:5678
+---
 
-## Resources
+## Setup
 
-- 📚 [Documentation](https://docs.n8n.io)
-- 🔧 [400+ Integrations](https://n8n.io/integrations)
-- 💡 [Example Workflows](https://n8n.io/workflows)
-- 🤖 [AI & LangChain Guide](https://docs.n8n.io/advanced-ai/)
-- 👥 [Community Forum](https://community.n8n.io)
-- 📖 [Community Tutorials](https://community.n8n.io/c/tutorials/28)
+### Prerequisites
 
-## Support
+- A running [n8n](https://n8n.io) instance (self-hosted or cloud)
+- API keys for: Anthropic (Claude), Google AI Studio, PiAPI (Kling), ElevenLabs, WaveSpeed, Cloudinary, Airtable, Telegram Bot
 
-Need help? Our community forum is the place to get support and connect with other users:
-[community.n8n.io](https://community.n8n.io)
+### 1. Import the Workflow
+
+Open your n8n instance and import `n8n_pipeline_v74.json`. This creates the full 40+ node pipeline.
+
+### 2. Configure Environment Variables
+
+Set these in your n8n instance:
+
+```
+ANTHROPIC_API_KEY=
+AIRTABLE_API_KEY=
+AIRTABLE_BASE_ID=
+GOOGLE_AI_STUDIO_KEY=
+ELEVENLABS_API_KEY=
+PIAPI_API_KEY=
+WAVESPEED_API_KEY=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+### 3. Deploy the Frontend
+
+Host `index.html` anywhere (GitHub Pages, Netlify, Vercel, or just open locally). On first use, click the settings gear to configure:
+
+- **Webhook URL** — Your n8n webhook endpoint (e.g., `https://your-n8n.example.com/webhook/ai-video-pipeline`)
+- **Product description** — Describe what you're selling; Claude uses this to write every script
+
+### 4. Create Your First Video
+
+1. Select or create a character (name + gender)
+2. Pick a video format (Hook, Reveal, Demo, CTA, Split, Snapchat Hook)
+3. Set the scene (location + lighting)
+4. Choose visual style (tone + camera movement)
+5. Pick a script template or write your own
+6. Review and launch
+
+Your video arrives in Telegram in ~6 minutes.
+
+---
+
+## Available Voices
+
+| Female | Male |
+|--------|------|
+| Laura | Bernat |
+| Raquel | Volu |
+| Cristina | Carlos |
+
+---
+
+## Video Formats
+
+| Format | Words | Style | Best For |
+|--------|-------|-------|----------|
+| **Snapchat Hook** | 4-6 | Extreme close-up, whisper energy | Opening hooks on Snapchat/TikTok |
+| **Hook** | 6-10 | Scroll-stopping, direct to camera | First 5 seconds of any video |
+| **Reveal** | 15-20 | Setup + twist | Product reveals, before/after |
+| **Demo** | 10-15 | Show something in action | Product demonstrations |
+| **CTA** | 8-12 | Call to action, urgency | Closing clips, ad endings |
+| **Split** | 2 phrases | Contrasting poses | Comparison content |
+
+---
+
+## Architecture Highlights
+
+- **No Google Drive dependency** — All media flows through Cloudinary CDN
+- **Airtable as character memory** — Characters persist across sessions with appearance descriptions, reference images, and voice IDs
+- **Multi-model fallback chains** — Gemini cycles through 3-pro, 2.0-flash-exp; Kling cycles through v2.0-pro, v1.6-pro, v1.6-std, v1.5-std
+- **Polling with retry** — Kling: 35 retries x 15s; WaveSpeed: 25 retries x 8s — handles variable AI processing times
+- **Script calibration** — All templates are word-count calibrated so ElevenLabs produces exactly ~5 seconds of audio
+
+---
 
 ## License
 
-n8n is [fair-code](https://faircode.io) distributed under the [Sustainable Use License](https://github.com/n8n-io/n8n/blob/master/LICENSE.md) and [n8n Enterprise License](https://github.com/n8n-io/n8n/blob/master/LICENSE_EE.md).
-
-- **Source Available**: Always visible source code
-- **Self-Hostable**: Deploy anywhere
-- **Extensible**: Add your own nodes and functionality
-
-[Enterprise licenses](mailto:license@n8n.io) available for additional features and support.
-
-Additional information about the license model can be found in the [docs](https://docs.n8n.io/sustainable-use-license/).
-
-## Contributing
-
-Found a bug 🐛 or have a feature idea ✨? Check our [Contributing Guide](https://github.com/n8n-io/n8n/blob/master/CONTRIBUTING.md) for a setup guide & best practices.
-
-## Join the Team
-
-Want to shape the future of automation? Check out our [job posts](https://n8n.io/careers) and join our team!
-
-## What does n8n mean?
-
-**Short answer:** It means "nodemation" and is pronounced as n-eight-n.
-
-**Long answer:** "I get that question quite often (more often than I expected) so I decided it is probably best to answer it here. While looking for a good name for the project with a free domain I realized very quickly that all the good ones I could think of were already taken. So, in the end, I chose nodemation. 'node-' in the sense that it uses a Node-View and that it uses Node.js and '-mation' for 'automation' which is what the project is supposed to help with. However, I did not like how long the name was and I could not imagine writing something that long every time in the CLI. That is when I then ended up on 'n8n'." - **Jan Oberhauser, Founder and CEO, n8n.io**
+Private project by [@rafaelalberola](https://github.com/rafaelalberola).
