@@ -1,0 +1,890 @@
+{
+  "name": "AI Video Pipeline v75 — Subjects API",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Video Pipeline v5\n\n**Variables de entorno en Claw Cloud Run:**\n- `ANTHROPIC_API_KEY`\n- `AIRTABLE_API_KEY`\n- `AIRTABLE_BASE_ID`\n- `GOOGLE_AI_STUDIO_KEY`\n- `ELEVENLABS_API_KEY`\n- `PIAPI_API_KEY`\n- `WAVESPEED_API_KEY`\n- `TELEGRAM_BOT_TOKEN`\n- `TELEGRAM_CHAT_ID`\n- `CLOUDINARY_CLOUD_NAME`\n- `CLOUDINARY_API_KEY`\n- `CLOUDINARY_API_SECRET`\n\n**Voces disponibles:**\nMujer: Laura, Raquel, Cristina\nHombre: Bernat, Volu, Carlos\n\n**Sin Google Drive ✅**\n**WaveSpeed Lipsync-2-pro ✅**\n**Coste por vídeo: ~$1.36**",
+        "height": 380,
+        "width": 340,
+        "color": 4
+      },
+      "id": "node-00-sticky",
+      "name": "README Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-video-pipeline",
+        "responseMode": "onReceived",
+        "responseData": "",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "node-01-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "ai-video-pipeline"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Buscar Sujeto + preservar nombre/genero del webhook\n// $input.item.json aquí = output del Webhook (100% fiable)\nconst raw = $input.item.json;\n// El webhook puede llegar con body anidado o directo\nconst webhook = raw.body || raw;\nconst nombre  = (webhook.nombre_sujeto || '').trim();\nconst genero  = (webhook.genero || '').trim();\nconsole.log('[Buscar] nombre:', nombre, '| genero:', genero);\nif (!nombre) throw new Error('Webhook no envió nombre_sujeto');\nconst formula = encodeURIComponent('LOWER(TRIM({nombre}))=LOWER(TRIM(\"' + nombre + '\"))');\nconst res = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects?filterByFormula=' + formula + '&maxRecords=1',\n  headers: { 'Authorization': 'Bearer {{AIRTABLE_API_KEY}}' }\n});\nreturn {\n  records: res.records || [],\n  nombre_sujeto: nombre,\n  genero: genero,\n  idea_escena: webhook.idea_escena || '',\n  tipo_escena: webhook.tipo_escena || '',\n  localizacion: webhook.localizacion || '',\n  hora_dia: webhook.hora_dia || '',\n  accion: webhook.accion || '',\n  camara: webhook.camara || '',\n  tono_visual: webhook.tono_visual || '',\n  formato_video: webhook.formato_video || 'hook',\n  producto: webhook.producto || '',\n  template_script: webhook.template_script || '',\n  script_tts_override: webhook.script_tts_override || ''\n};"
+      },
+      "id": "node-02-airtable-lookup",
+      "name": "Buscar Sujeto en Airtable",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-records",
+              "leftValue": "={{ $json.records.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-03-if-subject",
+      "name": "Sujeto existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "record_id",
+              "value": "={{ $json.records[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "nombre",
+              "value": "={{ $json.records[0].fields.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "descripcion_fisica",
+              "value": "={{ $json.records[0].fields.descripcion_fisica }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "outfit_fijo",
+              "value": "={{ $json.records[0].fields.outfit_fijo }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "estilo_visual",
+              "value": "={{ $json.records[0].fields.estilo_visual }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "voice_id",
+              "value": "={{ $json.records[0].fields.voice_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "idea_escena",
+              "value": "={{ $json.idea_escena }}",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "foto_referencia",
+              "value": "={{ $json.records[0].fields.foto_referencia || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a9",
+              "name": "localizacion",
+              "value": "={{ $json.localizacion }}",
+              "type": "string"
+            },
+            {
+              "id": "a10",
+              "name": "hora_dia",
+              "value": "={{ $json.hora_dia }}",
+              "type": "string"
+            },
+            {
+              "id": "a11",
+              "name": "accion",
+              "value": "={{ $json.accion }}",
+              "type": "string"
+            },
+            {
+              "id": "a12",
+              "name": "camara",
+              "value": "={{ $json.camara }}",
+              "type": "string"
+            },
+            {
+              "id": "a13",
+              "name": "tono_visual",
+              "value": "={{ $json.tono_visual }}",
+              "type": "string"
+            },
+            {
+              "id": "a14",
+              "name": "formato_video",
+              "value": "={{ $json.formato_video }}",
+              "type": "string"
+            },
+            {
+              "id": "a15",
+              "name": "template_script",
+              "value": "={{ $json.template_script }}",
+              "type": "string"
+            },
+            {
+              "id": "a16",
+              "name": "script_tts_override",
+              "value": "={{ $json.script_tts_override }}",
+              "type": "string"
+            },
+            {
+              "id": "a17",
+              "name": "producto",
+              "value": "={{ $json.producto }}",
+              "type": "string"
+            },
+            {
+              "id": "a18",
+              "name": "tipo_escena",
+              "value": "={{ $json.tipo_escena }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-04-set-existing",
+      "name": "Cargar Sujeto Existente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular Rotación — lee de $input (viene de Buscar Sujeto Code node)\nconst inp = $input.item.json;\nconst nombre = inp.nombre_sujeto || '';\nconst genero  = inp.genero || 'hombre';\nconsole.log('[Rotación] nombre:', nombre, '| genero:', genero);\nconst voicesFemale = [\n  { name: 'Laura',    id: 'uQw4jpKzMLrZuo0RLPS9' },\n  { name: 'Raquel',   id: '1eHrpOW5l98cxiSRjbzJ' },\n  { name: 'Cristina', id: 'dNjJKg63Fr5AXwIdkATa' }\n];\nconst voicesMale = [\n  { name: 'Bernat', id: 'jadd0g0NRgNgE8nt4ofn' },\n  { name: 'Volu',   id: 'w8u1dIxiWVelUtUQg1MB' },\n  { name: 'Carlos', id: 'hvjsm0LgwcoD1EyrNAJI' }\n];\nconst countRes = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects',\n  headers: { 'Authorization': 'Bearer {{AIRTABLE_API_KEY}}' }\n});\nconst records = countRes.records || [];\nconst femaleCount = records.filter(r => r.fields.genero === 'mujer').length;\nconst maleCount   = records.filter(r => r.fields.genero === 'hombre').length;\nconst nextFemaleVoice = voicesFemale[femaleCount % voicesFemale.length];\nconst nextMaleVoice   = voicesMale[maleCount % voicesMale.length];\nreturn {\n  nombre_sujeto_fijo: nombre,\n  genero_fijo: genero,\n  next_female_voice_id:   nextFemaleVoice.id,\n  next_female_voice_name: nextFemaleVoice.name,\n  next_male_voice_id:     nextMaleVoice.id,\n  next_male_voice_name:   nextMaleVoice.name,\n  localizacion: inp.localizacion || '',\n  hora_dia: inp.hora_dia || '',\n  accion: inp.accion || '',\n  camara: inp.camara || '',\n  tono_visual: inp.tono_visual || '',\n  formato_video: inp.formato_video || 'hook',\n  template_script: inp.template_script || '',\n  script_tts_override: inp.script_tts_override || '',\n  idea_escena: inp.idea_escena || '',\n  tipo_escena: inp.tipo_escena || '',\n  producto: inp.producto || ''\n};"
+      },
+      "id": "node-04b-get-voice-rotation",
+      "name": "Calcular Rotación de Voz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "{{ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 800,\n  system: 'Crea un personaje UGC influencer de 25-35 años para redes sociales.\\n\\nREGLAS ABSOLUTAS:\\n- nombre en JSON = exactamente: ' + $json.nombre_sujeto_fijo + '\\n- genero en JSON = exactamente: ' + $json.genero_fijo + '\\n- Si genero=mujer: el personaje ES UNA MUJER, descripcion_fisica de mujer\\n- Si genero=hombre: el personaje ES UN HOMBRE, descripcion_fisica de hombre\\n- voice_id = ' + ($json.genero_fijo === 'mujer' ? $json.next_female_voice_id : $json.next_male_voice_id) + '\\n\\nDevuelve SOLO este JSON sin markdown:\\n{\"nombre\":\"' + $json.nombre_sujeto_fijo + '\",\"genero\":\"' + $json.genero_fijo + '\",\"descripcion_fisica\":\"...\",\"outfit_fijo\":\"...\",\"estilo_visual\":\"...\",\"voice_id\":\"' + ($json.genero_fijo === 'mujer' ? $json.next_female_voice_id : $json.next_male_voice_id) + '\"}',\n  messages: [{ role: 'user', content: 'Crea el personaje ' + $json.nombre_sujeto_fijo + ' (' + $json.genero_fijo + '). Solo JSON.' }]\n}) }}",
+        "options": {}
+      },
+      "id": "node-05-claude-new-subject",
+      "name": "Claude - Crear Sujeto Nuevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.content[0].text;\nlet clean = raw.replace(/^```[\\w]*\\n?/gm, '').replace(/\\n?```$/gm, '').trim();\nlet s;\ntry { s = JSON.parse(clean); } catch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('No JSON: ' + raw.substring(0,300));\n  s = JSON.parse(match[0]);\n}\n\n// Leer nombre y género desde Calcular Rotación de Voz (propagados explícitamente)\nconst rotacion = $('Calcular Rotación de Voz').item.json;\nconst nombre   = rotacion.nombre_sujeto_fijo || s.nombre || 'Sin nombre';\nconst genero   = rotacion.genero_fijo || 'hombre';\n\nconst voicesFemale = ['uQw4jpKzMLrZuo0RLPS9','1eHrpOW5l98cxiSRjbzJ','dNjJKg63Fr5AXwIdkATa'];\nconst voicesMale   = ['jadd0g0NRgNgE8nt4ofn','w8u1dIxiWVelUtUQg1MB','hvjsm0LgwcoD1EyrNAJI'];\nconst esMujer      = genero === 'mujer';\nconst validVoices  = esMujer ? voicesFemale : voicesMale;\n\nlet voice_id = s.voice_id;\nif (!validVoices.includes(voice_id)) {\n  voice_id = esMujer ? rotacion.next_female_voice_id : rotacion.next_male_voice_id;\n}\n\nconsole.log('[Parsear] nombre:', nombre, '| genero:', genero, '| voice_id:', voice_id);\n\nreturn {\n  nombre, genero,\n  descripcion_fisica: s.descripcion_fisica,\n  outfit_fijo: s.outfit_fijo,\n  estilo_visual: s.estilo_visual,\n  voice_id,\n  idea_escena: rotacion.idea_escena || '',\n  record_id: null,\n  localizacion: rotacion.localizacion || '',\n  hora_dia: rotacion.hora_dia || '',\n  accion: rotacion.accion || '',\n  camara: rotacion.camara || '',\n  tono_visual: rotacion.tono_visual || '',\n  formato_video: rotacion.formato_video || 'hook',\n  template_script: rotacion.template_script || '',\n  script_tts_override: rotacion.script_tts_override || '',\n  tipo_escena: rotacion.tipo_escena || '',\n  producto: rotacion.producto || ''\n};"
+      },
+      "id": "node-06-parse-new-subject",
+      "name": "Parsear Sujeto Nuevo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{AIRTABLE_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { nombre: $json.nombre, genero: $json.genero, descripcion_fisica: $json.descripcion_fisica, outfit_fijo: $json.outfit_fijo, estilo_visual: $json.estilo_visual, voice_id: $json.voice_id, total_runs: 0 } }) }}",
+        "options": {}
+      },
+      "id": "node-07-save-airtable",
+      "name": "Guardar Sujeto en Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge — unir datos de sujeto + escena\n// Lee TODO de $input.item.json — NUNCA usar $('NodeName') en Code nodes (task runner)\nconst inp = $input.item.json;\nconsole.log('[Merge] input keys:', Object.keys(inp).join(', '));\n\nlet subject;\n\n// Rama TRUE (sujeto existente): inp viene de Cargar Sujeto Existente (Set node)\n// Rama FALSE (sujeto nuevo): inp viene de Guardar Sujeto en Airtable (HTTP node)\nif (inp.record_id) {\n  // Sujeto existente — todos los campos están en inp (Set node los propagó)\n  subject = {\n    record_id: inp.record_id,\n    nombre: inp.nombre,\n    descripcion_fisica: inp.descripcion_fisica,\n    outfit_fijo: inp.outfit_fijo,\n    estilo_visual: inp.estilo_visual,\n    voice_id: inp.voice_id,\n    foto_referencia: inp.foto_referencia || ''\n  };\n  // Marcar run en Airtable\n  try {\n    await this.helpers.httpRequest({\n      method: 'PATCH',\n      url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects/' + subject.record_id,\n      headers: {\n        'Authorization': 'Bearer {{AIRTABLE_API_KEY}}',\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({ fields: { ultimo_uso: new Date().toISOString().split('T')[0] } })\n    });\n  } catch(e) { console.log('[Merge] Warning:', e.message); }\n} else {\n  // Sujeto nuevo — inp viene de Guardar Sujeto (Airtable response)\n  // Los campos de escena están en el record guardado? No — están en campos del response.\n  // Usamos los campos del response de Airtable + lo que venga\n  subject = {\n    record_id: inp.id || '',\n    nombre: inp.fields?.nombre || inp.nombre || '',\n    descripcion_fisica: inp.fields?.descripcion_fisica || inp.descripcion_fisica || '',\n    outfit_fijo: inp.fields?.outfit_fijo || inp.outfit_fijo || '',\n    estilo_visual: inp.fields?.estilo_visual || inp.estilo_visual || '',\n    voice_id: inp.fields?.voice_id || inp.voice_id || '',\n    foto_referencia: ''\n  };\n}\n\n// Campos de escena — desde inp (propagados por Cargar Sujeto Existente en rama TRUE)\n// Para rama FALSE necesitamos leerlos de la cadena. Como el HTTP Response de Airtable\n// no los tiene, usamos los items previos via $items() como fallback\nlet escena = {};\nif (inp.localizacion) {\n  escena = inp;\n} else {\n  // Fallback: leer todos los items para encontrar los datos de escena\n  try {\n    const allItems = $input.all();\n    for (const item of allItems) {\n      if (item.json.localizacion) { escena = item.json; break; }\n    }\n  } catch(e) {}\n}\n\nconsole.log('[Merge] localizacion:', escena.localizacion || inp.localizacion);\nconsole.log('[Merge] tono_visual:', escena.tono_visual || inp.tono_visual);\nconsole.log('[Merge] camara:', escena.camara || inp.camara);\n\nsubject.tipo_escena = escena.tipo_escena || inp.tipo_escena || '';\nsubject.localizacion = escena.localizacion || inp.localizacion || '';\nsubject.hora_dia = escena.hora_dia || inp.hora_dia || '';\nsubject.accion = escena.accion || inp.accion || '';\nsubject.camara = escena.camara || inp.camara || '';\nsubject.tono_visual = escena.tono_visual || inp.tono_visual || '';\nsubject.formato_video = escena.formato_video || inp.formato_video || 'hook';\nsubject.producto = escena.producto || inp.producto || '';\nsubject.template_script = escena.template_script || inp.template_script || '';\nsubject.script_tts_override = escena.script_tts_override || inp.script_tts_override || '';\nsubject.idea_escena = escena.idea_escena || inp.idea_escena || '';\n\nreturn subject;"
+      },
+      "id": "node-08-merge-branches",
+      "name": "Merge - Unir Ramas IF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "{{ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 4000,\n  system: `Eres un Senior Creative Director especializado en UGC viral para Instagram Stories (9:16).\nProduces vídeos modulares de 4-5 segundos cada uno, ensamblables en post-producción con Remotion.\n\n════ PRODUCTO QUE SE VENDE ════\n${$json.producto || 'Producto/servicio genérico'}\nTodo el contenido generado (script, imagen, vídeo) DEBE posicionar y vender este producto.\nEl script debe ser persuasivo y dirigido a la audiencia de este producto.\n\n════ IDENTIDAD DEL PERSONAJE (FIJA) ════\nNombre: ${$json.nombre}\nGénero: ${$json.genero || 'no especificado'}\nFísico: ${$json.descripcion_fisica}\nOutfit: ${$json.outfit_fijo}\nEstética personal: ${$json.estilo_visual}\nNOTA: La estética personal del personaje aplica SOLO a su look/ropa/estilo personal. NO dicta el entorno ni la localización. El entorno viene de la ESCENA.\nNOTA 2: Adapta el tono y vocabulario del script al género y personalidad del personaje. Si es mujer, usa lenguaje natural femenino. Si es hombre, masculino.\n\n════ ESCENA DEL CLIP (VARIABLE — OBLIGATORIO RESPETAR) ════\nLocalización: ${$json.localizacion || 'apartamento moderno'}\nHora/Luz: ${$json.hora_dia || 'tarde, luz natural'}\nTono visual: ${$json.tono_visual || 'iPhone 15 Pro, natural light, no filters, raw authentic'}\nCámara: ${$json.camara || 'medium close-up'}\nAcción: ${$json.accion || 'habla a cámara directamente'}\n\nREGLA CRÍTICA: Los prompts de imagen (prompt_frame_inicio, prompt_frame_fin) y de vídeo (prompt_video_kling) DEBEN reflejar EXACTAMENTE la localización, hora/luz y tono visual indicados arriba. Si la escena dice \"playa\", el personaje ESTÁ en la playa. Si dice \"mañana, luz suave\", la iluminación ES suave y matutina. NUNCA ignores estos parámetros.\n\n════ FORMATOS DE VÍDEO MODULARES ════\nCada formato tiene duración, script y estructura de shots específicos.\n\nREGLA DE DURACIÓN DE AUDIO: Todos los formatos duran 5 segundos. El script_tts DEBE tener entre 12 y 25 palabras para producir ~4-5 segundos de audio con lipsync. NUNCA generes scripts de menos de 12 palabras — el audio sería demasiado corto y el vídeo se recortaría. Si el usuario proporciona un script base, adáptalo para que tenga la longitud correcta.\n\nHOOK — 5s, 1-2 shots\nScript: 15-20 palabras. Afirmación disruptiva que para el scroll. Tono declarativo.\nShot: medium-close, cámara a nivel de ojos, push-in lento.\n\nSNAPCHAT_HOOK — 5s, 1 shot\nScript: 12-15 palabras. Frase corta de impacto, shock value, directa.\nShot: extreme close-up cara, estático, mirada directa.\n\nREVEAL — 5s, 2-3 shots\nScript: 20-25 palabras. Estructura: setup + giro inesperado.\nShots: plano corto → medio → plano corto con expresión de revelación.\n\nDEMO — 5s, 2 shots\nScript: 18-22 palabras. Mostrar algo concreto, acción visible.\nShot 1: OTS o plano detalle. Shot 2: reacción/resultado.\n\nCTA — 5s, 1-2 shots\nScript: 15-18 palabras. Urgencia + beneficio concreto. Verbo de acción al inicio.\nShot: medium, señala a cámara o hacia abajo (swipe up motion).\n\nSPLIT — 5s, 2 shots rápidos\nScript: 18-22 palabras. Dos frases contrastadas (antes/después, falso/verdad).\nShot 1: expresión neutra diciendo el \"antes\". Shot 2: cambio de expresión diciendo el \"después\".\n\n════ PROMPT IMAGEN — NANOBANANA PRO ════\nFORMATO: vertical 9:16.\nESTILO: Usa el tono visual de la ESCENA (ej: \"Shot on iPhone 15 Pro, natural light\" o \"Fujifilm X100V, fine grain\" o \"Kodak Portra 400, warm analog\" o \"cinematic editorial, sharp\").\nESCENARIO: INCLUYE la localización y hora/luz de la ESCENA en el prompt. El personaje debe estar EN ese lugar con ESA iluminación.\nPIEL: poros visibles, textura real, microimperfecciones. NOT 3D, NOT CGI, NOT airbrushed.\nACCIÓN: el personaje está en mid-action del momento específico del formato.\n\n════ PROMPT KLING — MULTI-SHOT 5s ════\nDuración: 5 segundos. Genera 2-3 shots con cortes en Kling.\nMOVIMIENTO: suave, natural, unbothered. Sin movimientos bruscos.\nCada shot tiene shot_type y camera_movement distintos.\n\nREGLA CRÍTICA LIPSYNC: El personaje DEBE estar hablando activamente durante TODO el vídeo. El full_prompt DEBE incluir instrucciones explícitas de movimiento de boca: \"character is actively speaking and talking, visible mouth movements, natural jaw motion, lip articulation\". Sin esto, el lipsync posterior NO funcionará — WaveSpeed necesita movimiento de labios preexistente en el vídeo.\n\nESCENARIO: el entorno del vídeo DEBE coincidir con la localización y hora de la ESCENA.\n\nTRANSICIÓN START→END (OBLIGATORIO):\nEl full_prompt de Kling DEBE comenzar con esta instrucción exacta:\n\"Smooth cinematic transition from start reference image to end reference image. The video begins exactly as shown in the start frame and ends exactly as shown in the end frame. Maintain all visual elements, accessories and styling details from BOTH reference frames throughout the entire video. Character identity, clothing, accessories and environment must remain consistent with both reference images.\"\nLuego describe la acción y el movimiento de cámara.\n\n════ OUTPUT JSON ESTRICTO ════\n{\n  \"script_tts\": \"texto final que VENDE el producto según formato y duración\",\n  \"formato\": \"hook|snapchat_hook|reveal|demo|cta|split\",\n  \"duracion_segundos\": 5,\n  \"prompt_frame_inicio\": \"prompt NanoBanana ultra-detallado CON localización y luz de la escena\",\n  \"prompt_frame_fin\": \"mismo personaje, misma escena, pose/expresión final del clip\",\n  \"prompt_video_kling\": {\n    \"scene_brief\": \"1 frase\",\n    \"shot_sequence\": [\n      {\"shot_number\":1,\"shot_type\":\"\",\"camera_movement\":\"\",\"action\":\"\",\"expression\":\"\"}\n    ],\n    \"full_prompt\": \"prompt completo Kling MAX 1800 chars CON escenario\"\n  }\n}`,\n  messages: [{\n    role: 'user',\n    content: `FORMATO SOLICITADO: ${$json.formato_video || 'hook'}\n\nPRODUCTO: ${$json.producto || ''}\n\nESCENA:\nLocalización: ${$json.localizacion || 'apartamento moderno'}\nHora/Luz: ${$json.hora_dia || 'tarde, luz natural'}\nAcción: ${$json.accion || 'habla a cámara directamente'}\nCámara: ${$json.camara || 'medium close-up'}\nTono visual: ${$json.tono_visual || 'natural, iPhone, sin filtros'}\n\nSCRIPT BASE (usa como referencia y adapta al producto, formato y duración de 5s — mínimo 12 palabras):\n${$json.script_tts_override || $json.template_script || 'Genera un script original que venda el producto.'}\n\nGenera el script_tts final adaptado al producto y formato. Genera los prompts de imagen y vídeo con la escena indicada. JSON estricto. Solo JSON.`\n  }]\n}) }}",
+        "options": {}
+      },
+      "id": "node-09-claude-prompts",
+      "name": "Claude - Generar 4 Prompts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.content[0].text;\n\n// Clean markdown backticks robustly\nlet clean = raw\n  .replace(/^```[\\w]*\\n?/gm, '')\n  .replace(/\\n?```$/gm, '')\n  .trim();\n\n// Parse JSON\nlet p;\ntry {\n  p = JSON.parse(clean);\n} catch(e) {\n  // Try extracting JSON object from response\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('No JSON found in Claude response: ' + raw.substring(0,300));\n  try {\n    p = JSON.parse(match[0]);\n  } catch(e2) {\n    throw new Error('JSON inválido: ' + raw.substring(0,300));\n  }\n}\n\nconst required = ['script_tts','prompt_frame_inicio','prompt_frame_fin','prompt_video_kling'];\nfor (const f of required) { if (!p[f]) throw new Error('Falta campo: ' + f); }\n\nconst klingPrompt = typeof p.prompt_video_kling === 'object'\n  ? p.prompt_video_kling.full_prompt || JSON.stringify(p.prompt_video_kling)\n  : p.prompt_video_kling;\n\nconst merge = $('Merge - Unir Ramas IF').item.json;\n\nreturn {\n  prompt_frame_inicio: p.prompt_frame_inicio,\n  prompt_frame_fin: p.prompt_frame_fin,\n  prompt_video_kling: klingPrompt,\n  prompt_video_kling_full: p.prompt_video_kling,\n  script_tts: p.script_tts,\n  record_id: merge.record_id,\n  nombre_sujeto: merge.nombre,\n  estilo_visual: merge.estilo_visual,\n  voice_id: merge.voice_id,\n  formato_video: p.formato || merge.formato_video || '',\n  tono_visual: merge.tono_visual || '',\n  foto_referencia: merge.foto_referencia || '',\n  localizacion: merge.localizacion || '',\n  hora_dia: merge.hora_dia || '',\n  camara: merge.camara || '',\n  producto: merge.producto || ''\n};"
+      },
+      "id": "node-10-parse-prompts",
+      "name": "Parsear Prompts de Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 2A — NanoBanana: Multi-model fallback + reference image for consistency\nconst rawPrompt = $input.item.json.prompt_frame_inicio;\nconst tonoVisual = $input.item.json.tono_visual || '';\nconst fotoRef = $input.item.json.foto_referencia || '';\n\nlet stylePrefix = 'Shot on iPhone 15 Pro, natural light, no filters, no color grading, no post-processing.';\nif (tonoVisual.includes('Fujifilm')) stylePrefix = 'Shot on Fujifilm X100V, photodocumentary style, fine grain, muted tones, flat color.';\nelse if (tonoVisual.includes('Kodak')) stylePrefix = 'Shot on Kodak Portra 400, 35mm film, warm analog tones, natural film grain.';\nelse if (tonoVisual.includes('cinematic')) stylePrefix = 'Cinematic editorial photography, hyper-realistic, sharp focus, vivid colors.';\n\nconst skinPrefix = ' Ultra-realistic skin: visible pores, slight skin texture irregularities, natural sebum shine, subtle imperfections. NOT 3D render, NOT CGI, NOT digital art, NOT smoothed skin, NOT airbrushed. VERTICAL 9:16 PORTRAIT. Real human being. ';\n\nlet prompt;\nlet refImageB64 = null;\nlet refImageMime = null;\n\nif (fotoRef) {\n  // Descargar foto de referencia para enviarla como imagen inline\n  console.log('[NanoBanana] Descargando foto_referencia:', fotoRef.substring(0, 80));\n  try {\n    const imgRes = await this.helpers.httpRequest({\n      method: 'GET',\n      url: fotoRef,\n      encoding: 'arraybuffer',\n      returnFullResponse: true\n    });\n    refImageB64 = Buffer.from(imgRes.body).toString('base64');\n    refImageMime = 'image/jpeg';\n    prompt = 'SAME PERSON as in the reference image — IDENTICAL face, bone structure, skin tone, hair color, hair texture, facial hair, eye color, nose shape, lip shape, jawline. Change ONLY the scene, pose, and lighting as described below. ' + stylePrefix + skinPrefix + rawPrompt;\n    console.log('[NanoBanana] Modo: imagen de referencia + prompt');\n  } catch(e) {\n    console.log('[NanoBanana] No se pudo descargar foto_referencia, usando solo texto:', e.message);\n    prompt = stylePrefix + skinPrefix + rawPrompt;\n  }\n} else {\n  prompt = stylePrefix + skinPrefix + rawPrompt;\n  console.log('[NanoBanana] Modo: solo texto (primer run)');\n}\n\nconst GKEY = '{{GOOGLE_AI_STUDIO_KEY}}';\nconst models = [\n  'gemini-3-pro-image-preview',\n  'gemini-2.0-flash-preview-image-generation',\n  'gemini-2.0-flash-exp'\n];\n\nlet lastError = '';\nfor (const model of models) {\n  console.log('[NanoBanana] Probando modelo:', model);\n  try {\n    // Build parts: reference image (if available) + text prompt\n    const parts = [];\n    if (refImageB64) {\n      parts.push({ inlineData: { mimeType: refImageMime, data: refImageB64 } });\n    }\n    parts.push({ text: prompt });\n\n    const nbRes = await this.helpers.httpRequest({\n      method: 'POST',\n      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GKEY}`,\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        contents: [{ parts }],\n        generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.3 }\n      }),\n      returnFullResponse: true,\n      ignoreHttpStatusErrors: true\n    });\n\n    if (nbRes.statusCode === 404) {\n      lastError = `${model}: 404`;\n      continue;\n    }\n    if (nbRes.statusCode >= 400) {\n      const body = typeof nbRes.body === 'string' ? nbRes.body : JSON.stringify(nbRes.body);\n      lastError = `${model}: ${nbRes.statusCode} ${body.substring(0,100)}`;\n      continue;\n    }\n\n    const resBody = typeof nbRes.body === 'string' ? JSON.parse(nbRes.body) : nbRes.body;\n    const resParts = resBody.candidates?.[0]?.content?.parts || [];\n    const imgPart = resParts.find(p => p.inlineData);\n\n    if (!imgPart) {\n      lastError = `${model}: sin imagen en respuesta`;\n      continue;\n    }\n\n    console.log('[NanoBanana] Imagen generada con modelo:', model, refImageB64 ? '(con referencia)' : '(sin referencia)');\n    return {\n      frame_inicio_b64: imgPart.inlineData.data,\n      frame_inicio_mime: imgPart.inlineData.mimeType || 'image/jpeg',\n      model_used: model,\n      prompt_frame_fin: $input.item.json.prompt_frame_fin,\n      prompt_video_kling: $input.item.json.prompt_video_kling,\n      record_id: $input.item.json.record_id,\n      nombre_sujeto: $input.item.json.nombre_sujeto,\n      formato_video: $input.item.json.formato_video || '',\n      localizacion: $input.item.json.localizacion || '',\n      producto: $input.item.json.producto || '',\n      voice_id: $input.item.json.voice_id,\n      tono_visual: $input.item.json.tono_visual || '',\n      foto_referencia: fotoRef\n    };\n  } catch(e) {\n    console.log('[NanoBanana] Excepción en', model, ':', e.message);\n    lastError = `${model}: ${e.message}`;\n  }\n}\n\nthrow new Error('Ningún modelo de Gemini funcionó. Último error: ' + lastError);"
+      },
+      "id": "node-11a-nanobanana-inicio",
+      "name": "2A — NanoBanana Frame Inicio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2840,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.elevenlabs.io/v1/text-to-speech/' + $json.voice_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "{{ELEVENLABS_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "audio/mpeg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.script_tts, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.75, similarity_boost: 0.80, style: 0, use_speaker_boost: false } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "node-11b-elevenlabs",
+      "name": "2C — ElevenLabs TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2840,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 2B — NanoBanana Frame Fin (opcional)\n// Si usar_frame_fin=true → genera frame_fin con descripción específica\n// Si usar_frame_fin=false (default) → devuelve frame_inicio como ambos frames\n\nconst usar = $input.item.json.usar_frame_fin === true\n  || String($input.item.json.usar_frame_fin).toLowerCase() === 'true';\n\nconst b64ref  = $input.item.json.frame_inicio_b64;\nconst mimeRef = $input.item.json.frame_inicio_mime;\nconst GKEY    = '{{GOOGLE_AI_STUDIO_KEY}}';\n\n// Upload frame_inicio a Cloudinary (siempre necesario)\nconst uploadImg = async (b64, mime, tag) => {\n  const res = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.cloudinary.com/v1_1/dte2qskyq/image/upload',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ file: 'data:' + mime + ';base64,' + b64, upload_preset: 'ai_pipeline', tags: [tag] }),\n    returnFullResponse: true, ignoreHttpStatusErrors: true\n  });\n  const body = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  if (res.statusCode >= 400) throw new Error('Cloudinary ' + tag + ': ' + JSON.stringify(body).substring(0,200));\n  if (!body.secure_url) throw new Error('Cloudinary ' + tag + ' sin URL');\n  return body;\n};\n\nconst upInicio = await uploadImg(b64ref, mimeRef, 'frame_inicio');\n\nif (!usar) {\n  // Sin frame_fin: usar frame_inicio como ambos → Kling genera movimiento libre\n  console.log('[2B] usar_frame_fin=false → solo frame_inicio');\n  return {\n    frame_inicio_url: upInicio.secure_url,\n    frame_fin_url: null,\n    frame_fin_generated: false,\n    prompt_video_kling: $input.item.json.prompt_video_kling,\n    record_id: $input.item.json.record_id,\n    nombre_sujeto: $input.item.json.nombre_sujeto,\n    formato_video: $input.item.json.formato_video || '',\n    localizacion: $input.item.json.localizacion || '',\n    producto: $input.item.json.producto || ''\n  };\n}\n\n// Con frame_fin: generar imagen específica para la transición\nconst rawPromptFin = $input.item.json.frame_fin_descripcion\n  || $input.item.json.prompt_frame_fin\n  || '';\n\nconst tonoVisual = $input.item.json.tono_visual || '';\nlet styleTag = 'Shot on iPhone 15 Pro, natural light, no filters.';\nif (tonoVisual.includes('Fujifilm')) styleTag = 'Shot on Fujifilm X100V, fine grain, muted tones.';\nelse if (tonoVisual.includes('Kodak')) styleTag = 'Shot on Kodak Portra 400, 35mm, warm analog.';\nelse if (tonoVisual.includes('cinematic')) styleTag = 'Cinematic editorial, sharp, vivid.';\nconst prefix = 'no earphones in ears. ' + styleTag + ' Hyperrealistic skin. NOT 3D, NOT CGI. VERTICAL 9:16. SAME CHARACTER as reference image — identical face, hair color, skin tone. Only change: ';\nconst prompt = prefix + rawPromptFin;\n\nconsole.log('[2B] usar_frame_fin=true → generando frame_fin');\n\nconst nbRes = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=' + GKEY,\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({\n    contents: [{ parts: [\n      { inlineData: { mimeType: mimeRef, data: b64ref } },\n      { text: prompt }\n    ]}],\n    generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.2 }\n  })\n});\n\nconst parts = nbRes.candidates?.[0]?.content?.parts || [];\nconst imgPart = parts.find(p => p.inlineData);\nif (!imgPart) throw new Error('NanoBanana 2B sin imagen. Response: ' + JSON.stringify(nbRes).substring(0,200));\n\nconst upFin = await uploadImg(imgPart.inlineData.data, imgPart.inlineData.mimeType || 'image/jpeg', 'frame_fin');\n\nreturn {\n  frame_inicio_url: upInicio.secure_url,\n  frame_fin_url: upFin.secure_url,\n  frame_fin_generated: true,\n  prompt_video_kling: $input.item.json.prompt_video_kling,\n  record_id: $input.item.json.record_id,\n  nombre_sujeto: $input.item.json.nombre_sujeto,\n  formato_video: $input.item.json.formato_video || '',\n  localizacion: $input.item.json.localizacion || '',\n  producto: $input.item.json.producto || ''\n};"
+      },
+      "id": "node-12-nanobanana-fin",
+      "name": "2B — NanoBanana Frame Fin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3100,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudinary.com/v1_1/dte2qskyq/video/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "parameterType": "formData",
+              "name": "upload_preset",
+              "value": "ai_pipeline"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-13-upload-audio",
+      "name": "2C — Subir Audio a Cloudinary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3100,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "node-14-merge-frames-audio",
+      "name": "Merge — Frames + Audio",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        3360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kling 3.0 I2V — Submit + Poll (sleep integrado)\nconst item = $input.item.json;\nconst frameInicioUrl = item.frame_inicio_url;\nconst frameFinUrl    = item.frame_fin_url;\nconst usarFrameFin   = item.frame_fin_generated === true;\nconst audioUrl       = item.audio_url || item.secure_url || item.url;\nconst promptVideo    = item.prompt_video_kling;\nconst recordId       = item.record_id;\nconst nombreSujeto   = item.nombre_sujeto;\n\nif (!frameInicioUrl) throw new Error('Falta frame_inicio_url');\nif (!audioUrl) throw new Error('Falta audio URL');\n\n// Ensure transition rule is ALWAYS first in the prompt, then truncate\nconst transitionPrefix = 'The character is actively speaking and talking throughout the entire video, with clear visible mouth movements, natural jaw motion, and lip articulation as if delivering a speech directly to camera. Smooth cinematic transition from start reference image to end reference image. The video begins exactly as shown in the start frame and ends exactly as shown in the end frame. Maintain character identity, clothing, accessories and environment consistent with both reference images. ';\nconst rawPrompt = promptVideo || '';\nconst hasTransition = rawPrompt.toLowerCase().includes('smooth cinematic transition');\nconst fullPrompt = hasTransition ? rawPrompt : transitionPrefix + rawPrompt;\nconst promptTruncado = fullPrompt.substring(0, 1800);\nconst PIAPI_KEY = '{{PIAPI_API_KEY}}';\n\n// SUBMIT\n// end_image_url solo si usar_frame_fin=true\nconst endImg = usarFrameFin ? frameFinUrl : null;\nconst configs = [\n  { version: '2.0', mode: 'pro', duration: 5, end_image_url: endImg },\n  { version: '1.6', mode: 'pro', duration: 5, end_image_url: endImg },\n  { version: '1.6', mode: 'std', duration: 5, end_image_url: endImg },\n  { version: '1.5', mode: 'std', duration: 5, end_image_url: endImg },\n];\n\nconst errors = [];\nlet taskId = null;\n\nfor (const cfg of configs) {\n  const input = { prompt: promptTruncado, image_url: frameInicioUrl, duration: cfg.duration, version: cfg.version, aspect_ratio: '9:16', mode: cfg.mode };\n  if (cfg.end_image_url) input.end_image_url = cfg.end_image_url;\n  const label = `v${cfg.version}/${cfg.mode}/${cfg.duration}s`;\n  try {\n    const raw = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.piapi.ai/api/v1/task',\n      headers: { 'x-api-key': PIAPI_KEY, 'Content-Type': 'application/json' },\n      body: JSON.stringify({ model: 'kling', task_type: 'video_generation', input }),\n      returnFullResponse: true,\n      ignoreHttpStatusErrors: true\n    });\n    const body = typeof raw.body === 'string' ? JSON.parse(raw.body) : (raw.body || raw);\n    console.log('[Kling Submit]', label, 'HTTP' + raw.statusCode + ':', JSON.stringify(body).substring(0, 200));\n    if (raw.statusCode < 400) {\n      taskId = body.data?.task_id || body.task_id;\n      if (taskId) { console.log('[Kling] task_id:', taskId); break; }\n    }\n    errors.push(label + ' HTTP' + raw.statusCode + ': ' + JSON.stringify(body).substring(0, 150));\n  } catch(e) {\n    errors.push(label + ': ' + e.message.substring(0, 100));\n  }\n}\n\nif (!taskId) throw new Error('Kling submit fallido:\\n' + errors.join('\\n'));\n\n// SLEEP 3 minutos (inline, sin Wait node)\nconsole.log('[Kling] Esperando 3 minutos antes de poll...');\nawait new Promise(r => setTimeout(r, 180000));\nconsole.log('[Kling] Iniciando poll...');\n\n// Recursive URL finder\nfunction findVideoUrl(obj, path, depth) {\n  if (depth > 8) return null;\n  if (typeof obj === 'string' && obj.length > 10) {\n    if (/\\.(mp4|webm|mov)/i.test(obj) || obj.includes('storage.theapi') || obj.includes('cdn.kling')) {\n      console.log('[Kling] URL en:', path);\n      return obj;\n    }\n  }\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) { const r = findVideoUrl(obj[i], path+'['+i+']', depth+1); if (r) return r; }\n  }\n  if (obj && typeof obj === 'object') {\n    for (const k of Object.keys(obj)) { const r = findVideoUrl(obj[k], path+'.'+k, depth+1); if (r) return r; }\n  }\n  return null;\n}\n\n// POLL 35x15s = 525s\nfor (let i = 0; i < 35; i++) {\n  await new Promise(r => setTimeout(r, 15000));\n  const check = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://api.piapi.ai/api/v1/task/' + taskId,\n    headers: { 'x-api-key': PIAPI_KEY }\n  });\n  const status = check.data?.status || check.status;\n  console.log('[Kling Poll '+(i+1)+'/35] status:', status);\n  if (status === 'completed') {\n    let videoUrl = findVideoUrl(check, 'check', 0);\n    if (!videoUrl) throw new Error('Kling completed sin URL: ' + JSON.stringify(check.data).substring(0, 300));\n    if (videoUrl.startsWith('//')) videoUrl = 'https:' + videoUrl;\n    console.log('[Kling] ✅ URL:', videoUrl.substring(0, 80));\n    return [{ json: { kling_video_url: videoUrl, audio_url: audioUrl, record_id: recordId, nombre_sujeto: nombreSujeto, frame_inicio_url: frameInicioUrl, frame_fin_url: frameFinUrl, formato_video: item.formato_video || '', localizacion: item.localizacion || '', producto: item.producto || '' } }];\n  }\n  if (status === 'failed') throw new Error('Kling failed: ' + JSON.stringify(check.data).substring(0, 200));\n}\nthrow new Error('Kling timeout. task_id: ' + taskId);"
+      },
+      "id": "node-15-kling",
+      "name": "Nodo 3 — Kling Submit + Poll",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// WaveSpeed AI Lipsync-2-pro — expose error body\nconst klingVideoUrl = $input.item.json.kling_video_url;\nconst audioUrl      = $input.item.json.audio_url;\nconst WS_KEY = '{{WAVESPEED_API_KEY}}';\n\nif (!klingVideoUrl) throw new Error('Falta kling_video_url');\nif (!audioUrl) throw new Error('Falta audio_url');\n\n// Subir Kling a Cloudinary\nlet videoUrl = klingVideoUrl;\ntry {\n  const up = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.cloudinary.com/v1_1/dte2qskyq/video/upload',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ file: klingVideoUrl, upload_preset: 'ai_pipeline', resource_type: 'video' })\n  });\n  if (up.secure_url) videoUrl = up.secure_url;\n} catch(e) {}\n\nconsole.log('[WS] video:', videoUrl.substring(0, 100));\nconsole.log('[WS] audio:', audioUrl.substring(0, 100));\n\n// Probar todos los combos posibles en try/catch\nconst attempts = [\n  { url: 'https://api.wavespeed.ai/api/v3/sync/lipsync-2-pro', body: { video: videoUrl, audio: audioUrl, sync_mode: 'cut_off', temperature: 0.3 } },\n  { url: 'https://api.wavespeed.ai/api/v3/sync/lipsync-2-pro', body: { video: videoUrl, audio: audioUrl, sync_mode: 'cut_off' } },\n  { url: 'https://api.wavespeed.ai/api/v3/sync/lipsync-2-pro', body: { video: videoUrl, audio: audioUrl } },\n];\n\nconst results = [];\nfor (const att of attempts) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'POST',\n      url: att.url,\n      headers: { 'Authorization': 'Bearer ' + WS_KEY, 'Content-Type': 'application/json' },\n      body: JSON.stringify(att.body),\n      returnFullResponse: true,\n      ignoreHttpStatusErrors: true\n    });\n    const b = typeof r.body === 'string' ? r.body : JSON.stringify(r.body);\n    console.log('[WS]', att.url.split('/').slice(-2).join('/'), JSON.stringify(att.body).substring(0,50), '→ HTTP' + r.statusCode + ':', b.substring(0, 200));\n    results.push({ status: r.statusCode, body: b.substring(0, 200) });\n    if (r.statusCode < 400) {\n      const parsed = JSON.parse(b);\n      const requestId = parsed.data?.id || parsed.id;\n      if (requestId) {\n        // Poll\n        for (let i = 0; i < 25; i++) {\n          await new Promise(r => setTimeout(r, 8000));\n          const check = await this.helpers.httpRequest({\n            method: 'GET',\n            url: 'https://api.wavespeed.ai/api/v3/predictions/' + requestId + '/result',\n            headers: { 'Authorization': 'Bearer ' + WS_KEY }\n          });\n          const status = check.data?.status || check.status;\n          console.log('[WS Poll '+(i+1)+'] status:', status);\n          if (status === 'completed') {\n            const finalUrl = check.data?.outputs?.[0] || check.data?.output;\n            if (!finalUrl) throw new Error('Sin URL final: ' + JSON.stringify(check.data).substring(0,200));\n            return { video_final_url: finalUrl, record_id: $input.item.json.record_id, nombre_sujeto: $input.item.json.nombre_sujeto, frame_inicio_url: $input.item.json.frame_inicio_url, frame_fin_url: $input.item.json.frame_fin_url || null, formato_video: $input.item.json.formato_video || '', localizacion: $input.item.json.localizacion || '', producto: $input.item.json.producto || '',\n      frame_fin_generated: $input.item.json.frame_fin_generated || false };\n          }\n          if (status === 'failed') throw new Error('WaveSpeed failed: ' + JSON.stringify(check.data).substring(0,200));\n        }\n      }\n    }\n  } catch(e) {\n    const errStr = e.response?.data ? JSON.stringify(e.response.data) : e.message;\n    console.log('[WS] Exception:', errStr.substring(0, 200));\n    results.push({ exception: errStr.substring(0, 200) });\n  }\n}\n\nthrow new Error('WaveSpeed: todos fallaron. Resultados:\\n' + results.map((r,i) => i + ': ' + JSON.stringify(r)).join('\\n'));"
+      },
+      "id": "node-16-lipsync",
+      "name": "Nodo 4 — WaveSpeed Lipsync-2-pro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Feedback Loop — append video URL to Airtable + save foto_referencia on first run\nconst recordId = $input.item.json.record_id;\nconst videoUrl = $input.item.json.video_final_url;\nconst frameInicioUrl = $input.item.json.frame_inicio_url;\nconst frameFinUrl = $input.item.json.frame_fin_url || null;\nconst KEY = '{{AIRTABLE_API_KEY}}';\nconst BASE = 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects/';\n\n// 1. Read current record to get existing videos\nconst current = await this.helpers.httpRequest({\n  method: 'GET',\n  url: BASE + recordId,\n  headers: { 'Authorization': 'Bearer ' + KEY }\n});\n\nconst existingVideos = current.fields.videos_generados || [];\nconst newVideo = { url: videoUrl, filename: 'video_run' + ((current.fields.total_runs || 0) + 1) + '.mp4' };\nconst allVideos = [...existingVideos.map(v => ({ url: v.url })), newVideo];\n\nconst totalRuns = (current.fields.total_runs || 0) + 1;\n\n// 2. Build fotos_generadas (attachments — always append new frame)\nconst existingFotos = current.fields.fotos_generadas || [];\nconst newFotos = [{ url: frameInicioUrl, filename: 'frame_inicio_run' + totalRuns + '.jpg' }];\nif (frameFinUrl) newFotos.push({ url: frameFinUrl, filename: 'frame_fin_run' + totalRuns + '.jpg' });\nconst allFotos = [...existingFotos.map(f => ({ url: f.url })), ...newFotos];\n\n// 3. Build patch fields\nconst patchFields = {\n  videos_generados: allVideos,\n  fotos_generadas: allFotos,\n  total_runs: totalRuns,\n  ultimo_uso: new Date().toISOString().split('T')[0]\n};\n\n// 4. Save foto_referencia on first run (lock the character's face)\nif (!current.fields.foto_referencia && frameInicioUrl) {\n  patchFields.foto_referencia = frameInicioUrl;\n  console.log('[Feedback] Guardando foto_referencia (primer run):', frameInicioUrl.substring(0, 80));\n}\n\nawait this.helpers.httpRequest({\n  method: 'PATCH',\n  url: BASE + recordId,\n  headers: { 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ fields: patchFields })\n});\n\nconsole.log('[Feedback] Run #' + totalRuns + ' guardado. Videos acumulados:', allVideos.length);\nreturn $input.item.json;"
+      },
+      "id": "node-17-airtable-update",
+      "name": "Feedback Loop — Airtable",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4140,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: '{{TELEGRAM_CHAT_ID}}', parse_mode: 'HTML', text: '\\ud83c\\udfac <b>Video listo!</b>\\n\\n\\ud83c\\udfad <b>Personaje:</b> ' + $json.nombre_sujeto + '\\n\\ud83d\\udcf9 <b>Formato:</b> ' + ($json.formato_video || 'no definido') + '\\n\\ud83d\\udccd <b>Escena:</b> ' + ($json.localizacion ? $json.localizacion.split(',')[0] : 'no definida') + '\\n\\ud83d\\udce6 <b>Producto:</b> ' + ($json.producto ? $json.producto.substring(0,60) : 'sin definir') + '\\n\\n\\ud83d\\udd17 ' + $json.video_final_url }) }}",
+        "options": {}
+      },
+      "id": "node-18-telegram",
+      "name": "Nodo 5 — Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4140,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Subjects API (GET)\n\n**GET /webhook/subjects**\n\nDevuelve la lista de personajes\nde Airtable para el formulario.\n\nRama independiente del pipeline.\nLa API key queda en el servidor.",
+        "height": 200,
+        "width": 280,
+        "color": 6
+      },
+      "id": "node-20-sticky-subjects",
+      "name": "README Subjects",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "subjects",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-21-webhook-subjects",
+      "name": "Webhook Subjects",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        800
+      ],
+      "webhookId": "subjects-list"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch all subjects from Airtable — same key used in pipeline nodes above\nconst res = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects?fields%5B%5D=nombre&fields%5B%5D=genero&fields%5B%5D=total_runs&fields%5B%5D=ultimo_uso&sort%5B0%5D%5Bfield%5D=ultimo_uso&sort%5B0%5D%5Bdirection%5D=desc',\n  headers: { 'Authorization': 'Bearer {{AIRTABLE_API_KEY}}' }\n});\n\nconst subjects = (res.records || []).map(r => ({\n  id: r.id,\n  nombre: r.fields.nombre || '',\n  genero: r.fields.genero || '',\n  total_runs: r.fields.total_runs || 0,\n  ultimo_uso: r.fields.ultimo_uso || null\n}));\n\nconsole.log('[Subjects API] Devolviendo', subjects.length, 'personajes');\nreturn [{ json: { subjects } }];"
+      },
+      "id": "node-22-fetch-subjects",
+      "name": "Fetch Subjects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "node-23-respond-subjects",
+      "name": "Respond Subjects",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        800
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Buscar Sujeto en Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Sujeto en Airtable": {
+      "main": [
+        [
+          {
+            "node": "Sujeto existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sujeto existe?": {
+      "main": [
+        [
+          {
+            "node": "Cargar Sujeto Existente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calcular Rotación de Voz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargar Sujeto Existente": {
+      "main": [
+        [
+          {
+            "node": "Merge - Unir Ramas IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Rotación de Voz": {
+      "main": [
+        [
+          {
+            "node": "Claude - Crear Sujeto Nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Crear Sujeto Nuevo": {
+      "main": [
+        [
+          {
+            "node": "Parsear Sujeto Nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Sujeto Nuevo": {
+      "main": [
+        [
+          {
+            "node": "Guardar Sujeto en Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Sujeto en Airtable": {
+      "main": [
+        [
+          {
+            "node": "Merge - Unir Ramas IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge - Unir Ramas IF": {
+      "main": [
+        [
+          {
+            "node": "Claude - Generar 4 Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Generar 4 Prompts": {
+      "main": [
+        [
+          {
+            "node": "Parsear Prompts de Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Prompts de Claude": {
+      "main": [
+        [
+          {
+            "node": "2A — NanoBanana Frame Inicio",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2C — ElevenLabs TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2A — NanoBanana Frame Inicio": {
+      "main": [
+        [
+          {
+            "node": "2B — NanoBanana Frame Fin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2B — NanoBanana Frame Fin": {
+      "main": [
+        [
+          {
+            "node": "Merge — Frames + Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2C — ElevenLabs TTS": {
+      "main": [
+        [
+          {
+            "node": "2C — Subir Audio a Cloudinary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2C — Subir Audio a Cloudinary": {
+      "main": [
+        [
+          {
+            "node": "Merge — Frames + Audio",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge — Frames + Audio": {
+      "main": [
+        [
+          {
+            "node": "Nodo 3 — Kling Submit + Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nodo 4 — WaveSpeed Lipsync-2-pro": {
+      "main": [
+        [
+          {
+            "node": "Feedback Loop — Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Loop — Airtable": {
+      "main": [
+        [
+          {
+            "node": "Nodo 5 — Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nodo 3 — Kling Submit + Poll": {
+      "main": [
+        [
+          {
+            "node": "Nodo 4 — WaveSpeed Lipsync-2-pro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Subjects": {
+      "main": [
+        [
+          {
+            "node": "Fetch Subjects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Subjects": {
+      "main": [
+        [
+          {
+            "node": "Respond Subjects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI Video"
+    },
+    {
+      "name": "NanoBanana"
+    },
+    {
+      "name": "Kling 3.0"
+    },
+    {
+      "name": "Lipsync"
+    },
+    {
+      "name": "Cloudinary"
+    },
+    {
+      "name": "Voice Rotation"
+    }
+  ],
+  "triggerCount": 2,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "ai-video-pipeline-v75"
+  }
+}
