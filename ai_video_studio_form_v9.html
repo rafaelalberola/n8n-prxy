@@ -265,6 +265,15 @@ textarea { min-height: 90px; }
   margin-top: 0.75rem;
 }
 
+.library-loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-family: 'DM Mono', monospace;
+  padding: 1.25rem;
+}
+
 .divider-or {
   display: flex;
   align-items: center;
@@ -1042,57 +1051,70 @@ let N8N_WEBHOOK_URL = localStorage.getItem('n8n_webhook_url') || DEFAULT_WEBHOOK
 let ANTHROPIC_KEY = sessionStorage.getItem('claude_key') || '';
 // ────────────────────────────────────────────────────────────
 
-// ── CHARACTER LIBRARY (localStorage) ─────────────────────────
-function getCharLibrary() {
-  try { return JSON.parse(localStorage.getItem('char_library') || '[]'); } catch { return []; }
-}
-
-function saveCharToLibrary(name, gender) {
-  const lib = getCharLibrary();
-  const existing = lib.find(c => c.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    existing.gender = gender;
-    existing.lastUsed = Date.now();
-  } else {
-    lib.push({ name, gender, lastUsed: Date.now() });
-  }
-  localStorage.setItem('char_library', JSON.stringify(lib));
-}
-
+// ── CHARACTER LIBRARY (Airtable via n8n webhook) ─────────────
+let charLibrary = [];
 let selectedLibChar = null;
 
+function getSubjectsUrl() {
+  // Derive subjects endpoint from the pipeline webhook URL
+  // e.g. http://178.104.53.4:5678/webhook/ai-video-pipeline → http://178.104.53.4:5678/webhook/subjects
+  const base = N8N_WEBHOOK_URL.replace(/\/webhook\/.*$/, '/webhook/');
+  return base + 'subjects';
+}
+
+async function fetchCharLibrary() {
+  const grid = document.getElementById('charLibrary');
+  const empty = document.getElementById('charLibraryEmpty');
+  grid.innerHTML = '<div class="library-loading">Cargando personajes...</div>';
+  grid.style.display = 'grid';
+  empty.style.display = 'none';
+
+  try {
+    const res = await fetch(getSubjectsUrl());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    charLibrary = data.subjects || [];
+    renderCharLibrary();
+  } catch (e) {
+    console.warn('[Library] No se pudo cargar:', e.message);
+    charLibrary = [];
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'No se pudo conectar con tu servidor n8n. Crea un personaje nuevo abajo.';
+  }
+}
+
 function renderCharLibrary() {
-  const lib = getCharLibrary().sort((a, b) => b.lastUsed - a.lastUsed);
   const grid = document.getElementById('charLibrary');
   const empty = document.getElementById('charLibraryEmpty');
 
-  if (lib.length === 0) {
+  if (charLibrary.length === 0) {
     grid.style.display = 'none';
     empty.style.display = 'block';
+    empty.textContent = 'Aún no tienes personajes. Crea el primero abajo.';
     return;
   }
 
   grid.style.display = 'grid';
   empty.style.display = 'none';
-  grid.innerHTML = lib.map((c, i) => `
+  grid.innerHTML = charLibrary.map((c, i) => `
     <div class="char-card" data-idx="${i}" onclick="selectLibChar(${i})">
-      <div class="char-avatar">${c.gender === 'mujer' ? '♀' : '♂'}</div>
+      <div class="char-avatar">${c.genero === 'mujer' ? '♀' : '♂'}</div>
       <div>
-        <span class="char-name">${c.name}</span>
-        <span class="char-gender">${c.gender}</span>
+        <span class="char-name">${c.nombre}</span>
+        <span class="char-gender">${c.genero}${c.total_runs ? ' · ' + c.total_runs + ' runs' : ''}</span>
       </div>
     </div>
   `).join('');
 }
 
 function selectLibChar(idx) {
-  const lib = getCharLibrary().sort((a, b) => b.lastUsed - a.lastUsed);
-  const char = lib[idx];
+  const char = charLibrary[idx];
   if (!char) return;
 
   selectedLibChar = char;
-  S.nombre_sujeto = char.name;
-  S.genero = char.gender;
+  S.nombre_sujeto = char.nombre;
+  S.genero = char.genero;
 
   // Highlight selected card
   document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
@@ -1109,7 +1131,7 @@ function selectLibChar(idx) {
 
 // When user types in the name field, deselect library card
 document.addEventListener('DOMContentLoaded', () => {
-  renderCharLibrary();
+  fetchCharLibrary();
   document.getElementById('nombre_sujeto').addEventListener('input', () => {
     selectedLibChar = null;
     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
@@ -1430,9 +1452,6 @@ function goBack() {
 // ── SUBMIT ────────────────────────────────────────────────
 async function submitForm() {
   if (!validate()) return;
-
-  // Save character to library for future use
-  saveCharToLibrary(S.nombre_sujeto, S.genero);
 
   const payload = {
     nombre_sujeto: S.nombre_sujeto,

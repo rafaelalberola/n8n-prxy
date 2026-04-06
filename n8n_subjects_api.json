@@ -1,0 +1,123 @@
+{
+  "name": "Subjects API — Character Library",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Subjects API\n\n**GET /webhook/subjects**\n\nDevuelve la lista de personajes de Airtable\npara el formulario del AI Video Studio.\n\nLa API key de Airtable queda en el servidor,\nnunca se expone al frontend.\n\n**Response:** `{ subjects: [...] }`",
+        "height": 260,
+        "width": 300,
+        "color": 4
+      },
+      "id": "node-00-sticky",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "subjects",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-01-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "subjects-list"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch all subjects from Airtable\n// Uses env vars from docker-compose: AIRTABLE_API_KEY, AIRTABLE_BASE_ID\nconst key = process.env.AIRTABLE_API_KEY;\nconst base = process.env.AIRTABLE_BASE_ID || 'app8IWoPTQHOyXZQQ';\n\nif (!key) throw new Error('AIRTABLE_API_KEY no configurada en variables de entorno');\n\nconst fields = ['nombre', 'genero', 'total_runs', 'ultimo_uso'];\nconst fieldParams = fields.map(f => 'fields%5B%5D=' + f).join('&');\nconst url = 'https://api.airtable.com/v0/' + base + '/Subjects?' + fieldParams + '&sort%5B0%5D%5Bfield%5D=ultimo_uso&sort%5B0%5D%5Bdirection%5D=desc';\n\nconst res = await this.helpers.httpRequest({\n  method: 'GET',\n  url: url,\n  headers: { 'Authorization': 'Bearer ' + key }\n});\n\nconst subjects = (res.records || []).map(r => ({\n  id: r.id,\n  nombre: r.fields.nombre || '',\n  genero: r.fields.genero || '',\n  total_runs: r.fields.total_runs || 0,\n  ultimo_uso: r.fields.ultimo_uso || null\n}));\n\nconsole.log('[Subjects API] Devolviendo', subjects.length, 'personajes');\nreturn [{ json: { subjects } }];"
+      },
+      "id": "node-02-fetch",
+      "name": "Fetch Subjects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, OPTIONS"
+              }
+            ]
+          }
+        }
+      },
+      "id": "node-03-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Subjects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Subjects": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI Video"
+    },
+    {
+      "name": "Subjects"
+    }
+  ],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "subjects-api-v1"
+  }
+}
