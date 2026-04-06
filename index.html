@@ -1503,18 +1503,19 @@ async function fetchCharLibrary() {
 
   try {
     const res = await fetch(getSubjectsUrl());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
+    console.log('[Library] Status:', res.status, '| Body length:', text.length, '| Body:', text.substring(0, 200));
     if (!text || !text.trim()) {
       charLibrary = [];
       renderCharLibrary();
       return;
     }
     const data = JSON.parse(text);
-    charLibrary = data.subjects || [];
+    charLibrary = data.subjects || data || [];
+    if (Array.isArray(data) && !data.subjects) charLibrary = data;
     renderCharLibrary();
   } catch (e) {
-    console.warn('[Library]', e.message);
+    console.error('[Library] Error:', e.message);
     charLibrary = [];
     renderCharLibrary();
   }
