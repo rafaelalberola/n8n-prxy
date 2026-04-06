@@ -352,6 +352,21 @@ textarea { min-height: 90px; }
 .opt-label { font-size: 0.88rem; font-weight: 600; display: block; }
 .opt-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: block; line-height: 1.35; }
 
+
+.format-header {
+  display: grid;
+  grid-template-columns: 1fr 0.5fr 1fr 1.2fr;
+  gap: 8px;
+  padding: 0 1rem 0.5rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: capitalize;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
+}
+
 /* ── CHIPS ── */
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
 
@@ -847,7 +862,7 @@ textarea { min-height: 90px; }
         <div class="opt" data-value="split">
           <span class="opt-icon">↔</span>
           <span class="opt-label">Split</span>
-          <span class="opt-desc">Dos frases · antes / después · contraste</span>
+          <span class="opt-desc">2 frases contrastadas · antes / después</span>
         </div>
       </div>
 
@@ -1162,36 +1177,45 @@ const ACCION_MAP = {
 };
 
 // ── TEMPLATES ──────────────────────────────────────────────
+// ── TEMPLATES — calibrados por formato ────────────────────
+// snapchat_hook: 4-6 palabras (1 shot, extreme close-up)
+// hook: 6-10 palabras (1-2 shots, push-in lento)
+// reveal: 15-20 palabras (3 shots con giro)
+// demo: 10-15 palabras (OTS + reacción)
+// cta: 8-12 palabras (señala a cámara)
+// split: 2 frases contrastadas (antes/después)
 const TEMPLATES = {
   snapchat_hook: [
     { id: 'sh_para', badge: 'Para', script: 'Para. Esto lo cambia todo.' },
     { id: 'sh_nadie', badge: 'Nadie sabe', script: 'Nadie sabe esto todavía.' },
-    { id: 'sh_espera', badge: 'Espera', script: 'Espera. Mira esto.' }
+    { id: 'sh_espera', badge: 'Mira', script: 'Espera. Mira esto bien.' },
+    { id: 'sh_real', badge: 'No soy real', script: 'No soy real. Soy IA.' }
   ],
   hook: [
-    { id: 'h_secreto', badge: 'El secreto', script: 'Lo que nadie te cuenta sobre ganar dinero online.' },
+    { id: 'h_secreto', badge: 'El secreto', script: 'Lo que nadie te cuenta sobre crear contenido con inteligencia artificial.' },
     { id: 'h_descubri', badge: 'Descubrí', script: 'Descubrí algo que lo cambia todo. Y no es lo que piensas.' },
-    { id: 'h_parar', badge: 'Para el scroll', script: 'Para. Respira. Lo que estás buscando ya lo tienes.' }
+    { id: 'h_parar', badge: 'Para el scroll', script: 'Para. Respira. Lo que buscas ya existe y nadie te lo dijo.' },
+    { id: 'h_gratis', badge: 'Gratis', script: 'Todo esto lo puedes hacer gratis. Yo te enseño cómo.' }
   ],
   reveal: [
-    { id: 'r_noexisto', badge: 'No existo', script: 'Llevo [TIEMPO] en tu feed.\n\nY no soy real.\n\nSoy inteligencia artificial. Y lo más loco es que cualquiera puede hacer esto.' },
-    { id: 'r_dato', badge: 'Dato + giro', script: 'El [PORCENTAJE]% del contenido que consumes esta semana habrá sido generado con IA.\n\nEste incluido.\n\nBienvenido al futuro.' },
-    { id: 'r_prueba', badge: 'Prueba visual', script: 'Esta cara no existe.\nEsta voz, generada.\nEste entorno, creado con IA.\n\nTodo lo que ves es sintético. Y nadie lo nota.' }
+    { id: 'r_noexisto', badge: 'No existo', script: 'Llevo semanas apareciendo en tu feed. Y no soy real. Soy inteligencia artificial. Y lo más loco es que cualquiera puede hacer esto.' },
+    { id: 'r_dato', badge: 'Dato + giro', script: 'El setenta por ciento del contenido que consumes esta semana fue generado con inteligencia artificial. Este vídeo incluido. Bienvenido al futuro.' },
+    { id: 'r_prueba', badge: 'Prueba visual', script: 'Esta cara no existe. Esta voz fue generada. Este entorno fue creado con IA. Todo lo que ves es sintético. Y nadie lo nota.' }
   ],
   demo: [
-    { id: 'd_proceso', badge: 'El proceso', script: 'Esto es lo que necesitas:\n\nUna idea. Un nombre. Treinta segundos.\n\nEl sistema genera el personaje, el vídeo, la voz.\n\nTú no grabas nada. Nunca.' },
-    { id: 'd_numeros', badge: 'Los números', script: 'Un personaje: [PRECIO_PERSONAJE].\nUn vídeo: [PRECIO_VIDEO].\nUna cuenta en un mes: [PRECIO_MES].\n\nEso es lo que cuesta hacer esto a escala.' },
-    { id: 'd_antes', badge: 'Antes/ahora', script: 'Antes necesitabas [RECURSO_CARO].\n\nAhora necesitas [RECURSO_BARATO] y una idea.\n\nEl juego cambió. Y la mayoría no se ha enterado todavía.' }
+    { id: 'd_proceso', badge: 'El proceso', script: 'Una idea. Un nombre. Treinta segundos. El sistema genera el personaje, el vídeo y la voz. Tú no grabas nada.' },
+    { id: 'd_numeros', badge: 'Los números', script: 'Un personaje cuesta cero. Un vídeo cuesta un euro. Una cuenta completa al mes, doscientos euros. Eso es escalar.' },
+    { id: 'd_antes', badge: 'Antes y ahora', script: 'Antes necesitabas un equipo de producción. Ahora necesitas cinco euros y una idea. El juego cambió para siempre.' }
   ],
   cta: [
-    { id: 'c_link', badge: 'Link en bio', script: 'Si quieres saber cómo.\n\nLink en bio.\n\nAntes de que lo borre.' },
-    { id: 'c_seguir', badge: 'Follow', script: 'Sígueme.\n\nEn [PLAZO] voy a enseñar exactamente cómo funciona esto, paso a paso.\n\nGratis.' },
-    { id: 'c_pregunta', badge: 'Pregunta', script: '¿Cuántos personajes como yo crees que hay ya activos en redes?\n\nCuéntame en comentarios.\n\nY sígueme para ver cómo se hace.' }
+    { id: 'c_link', badge: 'Link en bio', script: 'Si quieres saber cómo funciona esto, link en bio. Antes de que lo borre.' },
+    { id: 'c_seguir', badge: 'Follow', script: 'Sígueme. Esta semana voy a enseñar exactamente cómo funciona, paso a paso.' },
+    { id: 'c_pregunta', badge: 'Pregunta', script: 'Cuántos personajes como yo crees que hay ya activos. Cuéntame en comentarios.' }
   ],
   split: [
-    { id: 'sp_antes', badge: 'Antes/después', script: 'Antes: [ESTADO_ANTES].\nAhora: [ESTADO_AHORA].\n\nLa diferencia es [DIFERENCIA_CLAVE].\n\nY está al alcance de cualquiera.' },
-    { id: 'sp_coste', badge: 'Coste', script: 'Opción A: [OPCION_CARA]. Precio: [PRECIO_A].\nOpción B: IA generativa. Precio: [PRECIO_B].\n\nEl resultado es indistinguible.\n\nTú eliges.' },
-    { id: 'sp_real', badge: 'Real vs IA', script: 'Izquierda: persona real.\nDerecha: inteligencia artificial.\n\n¿Puedes decir cuál es cuál?\n\nExacto. Ya no puedes.' }
+    { id: 'sp_antes', badge: 'Antes/después', script: 'Antes: horas editando sin resultados. Ahora: treinta segundos y listo. La diferencia es la IA generativa.' },
+    { id: 'sp_coste', badge: 'Coste', script: 'Opción A: una productora por miles de euros. Opción B: inteligencia artificial por dos euros. El resultado es igual.' },
+    { id: 'sp_real', badge: 'Real vs IA', script: 'Persona real a la izquierda. Inteligencia artificial a la derecha. No puedes distinguirlas. Exacto, ya no puedes.' }
   ]
 };
 
