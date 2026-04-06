@@ -1015,7 +1015,7 @@ textarea { min-height: 90px; }
   <div class="modal">
     <h3>⚙ Configuración</h3>
     <p>URL del webhook de n8n · se guarda en este navegador permanentemente</p>
-    <input type="text" id="webhookInput" placeholder="http://178.104.53.4:5678/webhook/ai-video-pipeline" spellcheck="false">
+    <input type="text" id="webhookInput" placeholder="https://n8n.prxy.studio/webhook/ai-video-pipeline" spellcheck="false">
     <div class="url-status" id="urlStatus"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeSettings()">Cancelar</button>
@@ -1041,7 +1041,7 @@ textarea { min-height: 90px; }
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-const DEFAULT_WEBHOOK = 'http://178.104.53.4:5678/webhook/ai-video-pipeline';
+const DEFAULT_WEBHOOK = 'https://n8n.prxy.studio/webhook/ai-video-pipeline';
 let N8N_WEBHOOK_URL = localStorage.getItem('n8n_webhook_url') || DEFAULT_WEBHOOK;
 let ANTHROPIC_KEY = sessionStorage.getItem('claude_key') || '';
 // ────────────────────────────────────────────────────────────
@@ -1052,7 +1052,7 @@ let selectedLibChar = null;
 
 function getSubjectsUrl() {
   // Derive subjects endpoint from the pipeline webhook URL
-  // e.g. http://178.104.53.4:5678/webhook/ai-video-pipeline → http://178.104.53.4:5678/webhook/subjects
+  // e.g. https://n8n.prxy.studio/webhook/ai-video-pipeline → https://n8n.prxy.studio/webhook/subjects
   const base = N8N_WEBHOOK_URL.replace(/\/webhook\/.*$/, '/webhook/');
   return base + 'subjects';
 }
