@@ -964,8 +964,17 @@ textarea { min-height: 90px; }
       <div class="err" id="err4">Selecciona tono visual y cámara</div>
     </div>
 
-    <!-- STEP 5: Review -->
+    <!-- STEP 5: Script -->
     <div class="step" data-step="5">
+      <div class="q">El guion</div>
+      <div class="qhint">Elige un template o escribe tu propio script. Se adaptará a tu producto.</div>
+      <div class="template-chips" id="templateChips"></div>
+      <div class="template-preview" id="templatePreview">Selecciona un template arriba</div>
+      <textarea id="script_custom" placeholder="O escribe aquí tu propio guion. La IA lo adaptará a la duración del formato y a tu producto."></textarea>
+    </div>
+
+    <!-- STEP 6: Review -->
+    <div class="step" data-step="6">
       <div class="q">Todo listo</div>
       <div class="qhint">Revisa y lanza el pipeline de producción</div>
       <div class="summary" id="summaryGrid"></div>
@@ -1119,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 let currentStep = 1;
 
 const S = {
@@ -1131,8 +1140,48 @@ const S = {
   localizacion: '',
   hora_dia: '',
   tono_visual: '',
-  camara: ''
+  camara: '',
+  template_id: '',
+  template_script: '',
+  script_custom: ''
 };
+
+// ── TEMPLATES — calibrados para 5s de audio (~15-25 palabras) ──
+// Cada script menciona el producto con placeholders que Claude reemplaza
+const TEMPLATES = {
+  snapchat_hook: [
+    { id: 'sh_para', badge: 'Para', script: 'Para. Esto cambia cómo haces contenido para siempre.' },
+    { id: 'sh_nadie', badge: 'Nadie sabe', script: 'Nadie te ha contado esto sobre crear contenido con IA todavía.' },
+    { id: 'sh_mira', badge: 'Mira', script: 'Mira bien. Lo que ves no es real. Es tu próximo negocio.' }
+  ],
+  hook: [
+    { id: 'h_secreto', badge: 'El secreto', script: 'Lo que nadie te cuenta sobre escalar contenido con inteligencia artificial. Esto lo cambia todo.' },
+    { id: 'h_descubri', badge: 'Descubrí', script: 'Descubrí cómo crear cientos de vídeos sin grabar uno solo. Y el resultado es indistinguible de lo real.' },
+    { id: 'h_gratis', badge: 'Sin equipo', script: 'Sin cámara. Sin equipo. Sin actores. Solo una idea y treinta segundos. Así se hace contenido ahora.' }
+  ],
+  reveal: [
+    { id: 'r_noexisto', badge: 'No existo', script: 'Llevo semanas apareciendo en tu feed. Hablándote. Mirándote. Pero no soy real. Soy inteligencia artificial. Y lo más loco es que cualquiera puede crear esto para su marca.' },
+    { id: 'r_dato', badge: 'El dato', script: 'El setenta por ciento del contenido viral de esta semana fue generado con IA. Incluido este vídeo que estás viendo ahora mismo. Bienvenido al futuro del marketing.' },
+    { id: 'r_prueba', badge: 'Prueba', script: 'Esta cara no existe. Esta voz fue generada. Este entorno fue creado por inteligencia artificial. Todo es sintético. Y nadie lo nota. Tu competencia ya lo usa.' }
+  ],
+  demo: [
+    { id: 'd_proceso', badge: 'El proceso', script: 'Así funciona. Eliges un nombre. Defines la escena. En treinta segundos el sistema genera el personaje, el vídeo y la voz. Tú no grabas nada.' },
+    { id: 'd_numeros', badge: 'Los números', script: 'Un personaje cuesta cero. Un vídeo cuesta un euro con treinta y seis céntimos. Una cuenta completa al mes, doscientos euros. Eso es escalar contenido.' },
+    { id: 'd_antes', badge: 'Antes y ahora', script: 'Antes necesitabas una productora y miles de euros. Ahora necesitas cinco euros y una idea. El juego del contenido cambió para siempre.' }
+  ],
+  cta: [
+    { id: 'c_link', badge: 'Link en bio', script: 'Si quieres saber cómo funciona todo esto, el enlace está en mi bio. Es gratis. Pero no estará siempre.' },
+    { id: 'c_seguir', badge: 'Sígueme', script: 'Sígueme. Esta semana voy a enseñar paso a paso cómo crear tu propio avatar IA. Desde cero. Sin código.' },
+    { id: 'c_pregunta', badge: 'Pregunta', script: 'Cuántos personajes como yo crees que hay activos en redes ahora mismo. Dímelo en comentarios. Y sígueme para ver cómo se hace.' }
+  ],
+  split: [
+    { id: 'sp_antes', badge: 'Antes y después', script: 'Antes pasabas horas editando sin resultados. Ahora todo se genera en treinta segundos. La diferencia se llama inteligencia artificial generativa.' },
+    { id: 'sp_coste', badge: 'Coste real', script: 'Opción A, una productora por miles de euros. Opción B, inteligencia artificial por dos euros. El resultado es exactamente el mismo. Tú eliges.' },
+    { id: 'sp_real', badge: 'Real vs IA', script: 'A la izquierda una persona real. A la derecha inteligencia artificial. No puedes distinguir cuál es cuál. Ese es el punto.' }
+  ]
+};
+
+let currentTemplateIdx = 0;
 
 // Auto-action per formato
 const ACCION_MAP = {
@@ -1189,6 +1238,10 @@ document.querySelectorAll('.opts .opt').forEach(opt => {
     this.classList.add('selected');
     const key = group.id;
     S[key] = this.dataset.value;
+    if (key === 'formato_video') {
+      currentTemplateIdx = 0;
+      renderTemplates(S.formato_video);
+    }
   });
 });
 
@@ -1202,6 +1255,37 @@ document.querySelectorAll('.chips .chip').forEach(chip => {
     S[key] = this.dataset.value;
   });
 });
+
+// ── TEMPLATE RENDERING ───────────────────────────────────
+function renderTemplates(format) {
+  const tpls = TEMPLATES[format] || [];
+  const container = document.getElementById('templateChips');
+  const preview = document.getElementById('templatePreview');
+  if (!tpls.length) {
+    container.innerHTML = '';
+    preview.textContent = '—';
+    return;
+  }
+  currentTemplateIdx = 0;
+  container.innerHTML = tpls.map((t, i) => `
+    <div class="chip template-chip${i === 0 ? ' selected' : ''}" data-idx="${i}" onclick="selectTemplate(${i})">${t.badge}</div>
+  `).join('');
+  selectTemplate(0);
+}
+
+function selectTemplate(idx) {
+  const format = S.formato_video;
+  const tpls = TEMPLATES[format] || [];
+  if (!tpls[idx]) return;
+  currentTemplateIdx = idx;
+  const t = tpls[idx];
+  S.template_id = t.id;
+  S.template_script = t.script;
+  document.getElementById('templatePreview').textContent = t.script;
+  document.querySelectorAll('.template-chip').forEach((c, i) => {
+    c.classList.toggle('selected', i === idx);
+  });
+}
 
 // ── FRAME FIN TOGGLE ──────────────────────────────────────
 function toggleFrameFin() {
@@ -1223,6 +1307,7 @@ function buildSummary() {
     ['luz', S.hora_dia?.split(',')[0] || '—'],
     ['visual', S.tono_visual?.split(',')[0] || '—'],
     ['cámara', S.camara?.split(',')[0] || '—'],
+    ['script', S.script_custom || S.template_script ? (S.script_custom || S.template_script).substring(0, 60) + '…' : '—'],
     ['transición frames', S.usar_frame_fin ? 'Sí — controlada' : 'No — consistencia total'],
     ['producto', PRODUCTO ? PRODUCTO.substring(0, 70) + (PRODUCTO.length > 70 ? '…' : '') : '⚠ Sin definir — ve a ⚙ Configuración']
   ];
@@ -1272,7 +1357,11 @@ function validate() {
       document.getElementById('err4').classList.toggle('show', !ok);
       return ok;
     },
-    5: () => true
+    5: () => {
+      S.script_custom = document.getElementById('script_custom').value.trim();
+      return true;
+    },
+    6: () => true
   };
   return (v[currentStep] || (() => true))();
 }
@@ -1283,7 +1372,8 @@ function showStep(n) {
   document.querySelector(`[data-step="${n}"]`).classList.add('active');
   currentStep = n;
   updateProgress();
-  if (n === 5) buildSummary();
+  if (n === 5 && S.formato_video) { currentTemplateIdx = 0; renderTemplates(S.formato_video); }
+  if (n === 6) buildSummary();
 }
 
 function goNext() {
@@ -1309,6 +1399,8 @@ async function submitForm() {
     camara: S.camara,
     tono_visual: S.tono_visual,
     producto: PRODUCTO,
+    template_script: S.template_script,
+    script_tts_override: S.script_custom || S.template_script,
     usar_frame_fin: S.usar_frame_fin,
     frame_fin_descripcion: S.frame_fin_descripcion
   };
