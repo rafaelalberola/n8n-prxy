@@ -131,7 +131,7 @@
             {
               "id": "a8",
               "name": "foto_referencia",
-              "value": "={{ $json.records[0].fields.foto_referencia || '' }}",
+              "value": "={{ Array.isArray($json.records[0].fields.foto_referencia) ? ($json.records[0].fields.foto_referencia[0]?.url || '') : ($json.records[0].fields.foto_referencia || '') }}",
               "type": "string"
             },
             {
@@ -574,7 +574,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Fetch all subjects from Airtable — same key used in pipeline nodes above\nconst res = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects?fields%5B%5D=nombre&fields%5B%5D=genero&fields%5B%5D=total_runs&fields%5B%5D=ultimo_uso&fields%5B%5D=foto_referencia&sort%5B0%5D%5Bfield%5D=ultimo_uso&sort%5B0%5D%5Bdirection%5D=desc',\n  headers: { 'Authorization': 'Bearer {{AIRTABLE_API_KEY}}' }\n});\n\nconst subjects = (res.records || []).map(r => ({\n  id: r.id,\n  nombre: r.fields.nombre || '',\n  genero: r.fields.genero || '',\n  total_runs: r.fields.total_runs || 0,\n  ultimo_uso: r.fields.ultimo_uso || null,\n  foto_referencia: r.fields.foto_referencia || ''\n}));\n\nconsole.log('[Subjects API] Devolviendo', subjects.length, 'personajes');\nreturn [{ json: { subjects } }];"
+        "jsCode": "// Fetch all subjects from Airtable — same key used in pipeline nodes above\nconst res = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://api.airtable.com/v0/{{AIRTABLE_BASE_ID}}/Subjects?fields%5B%5D=nombre&fields%5B%5D=genero&fields%5B%5D=total_runs&fields%5B%5D=ultimo_uso&fields%5B%5D=foto_referencia&sort%5B0%5D%5Bfield%5D=ultimo_uso&sort%5B0%5D%5Bdirection%5D=desc',\n  headers: { 'Authorization': 'Bearer {{AIRTABLE_API_KEY}}' }\n});\n\nconst subjects = (res.records || []).map(r => ({\n  id: r.id,\n  nombre: r.fields.nombre || '',\n  genero: r.fields.genero || '',\n  total_runs: r.fields.total_runs || 0,\n  ultimo_uso: r.fields.ultimo_uso || null,\n  foto_referencia: (Array.isArray(r.fields.foto_referencia) ? (r.fields.foto_referencia[0]?.url || r.fields.foto_referencia[0]?.thumbnails?.large?.url || '') : r.fields.foto_referencia || '')\n}));\n\nconsole.log('[Subjects API] Devolviendo', subjects.length, 'personajes');\nreturn [{ json: { subjects } }];"
       },
       "id": "node-22-fetch-subjects",
       "name": "Fetch Subjects",
