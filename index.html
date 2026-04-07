@@ -6,7 +6,6 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>AI Video Studio v2</title>
-<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff6b35'/></svg>">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap');
@@ -336,7 +335,7 @@ textarea { min-height: 90px; }
   letter-spacing: 0.2em;
   color: var(--muted);
   text-transform: uppercase;
-  margin: 1.5rem 0 0.75rem;
+  margin: 32px 0 0.75rem;
 }
 
 /* ── FRAME FIN TOGGLE ── */
@@ -820,33 +819,38 @@ textarea { min-height: 90px; }
 .creator-panel {
   position: relative;
   width: 100%;
-  height: 100%;
+  max-width: 720px;
+  max-height: 100%;
+  margin: auto;
   background: var(--surface);
   border-radius: 24px;
   border: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   box-shadow: 0 24px 80px rgba(0,0,0,0.2);
 }
 
-/* Left: Controls */
-.creator-left {
-  padding: 2rem;
+/* Inner scrollable body */
+.creator-body {
+  padding: 1.75rem 2rem;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex: 1;
 }
+.creator-body::-webkit-scrollbar { width: 4px; }
+.creator-body::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 4px; }
 
-.creator-left::-webkit-scrollbar { width: 4px; }
-.creator-left::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 4px; }
+.creator-foot {
+  padding: 1rem 2rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
 
 .creator-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  padding: 1.5rem 2rem 0.75rem;
 }
 
 .creator-title {
@@ -986,121 +990,184 @@ textarea { min-height: 90px; }
   transition: all 0.15s;
   box-shadow: 0 2px 8px rgba(255,107,53,0.2);
 }
-.btn-create-char:hover { background: #ff8259; transform: translateY(-1px); }
+.btn-create-char:hover:not(:disabled) { background: #ff8259; transform: translateY(-1px); }
+.btn-create-char:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 
-/* Right: 3D Preview */
-.creator-right {
-  background: linear-gradient(160deg, #111, #1a1714);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  position: relative;
-  overflow: hidden;
-  cursor: grab;
-  user-select: none;
-}
-.creator-right:active { cursor: grabbing; }
-
-.creator-right::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 80%, rgba(255,107,53,0.06) 0%, transparent 70%);
-}
-
-/* Platform circle */
-.av-platform {
-  position: absolute;
-  bottom: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  height: 30px;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-/* 3D scene container */
-.av-scene {
-  width: 280px;
-  height: 380px;
-  position: relative;
-  z-index: 1;
-}
-
-#av3dCanvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  cursor: grab;
-}
-#av3dCanvas:active { cursor: grabbing; }
-
-.av-info {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.av-name {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.02em;
-  min-height: 1.5rem;
-}
-
-.av-desc {
+.creator-intro { margin: 0 0 0.6rem; }
+.creator-step {
   font-family: 'DM Mono', monospace;
-  font-size: 0.68rem;
-  color: rgba(255,255,255,0.35);
-  margin-top: 0.25rem;
-  min-height: 1rem;
-}
-
-.av-prompt-box {
-  position: absolute;
-  bottom: 2rem;
-  left: 2rem;
-  right: 2rem;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  padding: 0.75rem;
-  z-index: 2;
-}
-
-.av-prompt-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 4px;
+}
+
+/* Simple form rows */
+.form-row { margin-bottom: 1rem; }
+.form-label {
   display: block;
-  opacity: 0.7;
-}
-
-.av-prompt-text {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  line-height: 1.5;
-  color: rgba(255,255,255,0.35);
-  word-break: break-word;
-}
-
-.av-drag-hint {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
   font-family: 'DM Mono', monospace;
   font-size: 9px;
-  letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.15);
-  z-index: 2;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 0.45rem;
+}
+.form-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  padding: 0.8rem 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--dim); }
+
+/* Input with leading icon */
+.input-icon { position: relative; }
+.input-icon svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.input-icon .form-input { padding-left: 2.6rem; }
+.input-icon:focus-within svg { color: var(--accent); }
+
+/* Gender cards */
+.gender-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.gender-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 0.95rem 0.9rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+}
+.gender-card svg {
+  width: 22px;
+  height: 22px;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.gender-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.gender-card.selected {
+  border-color: var(--accent);
+  background: var(--block-peach);
+  color: var(--accent);
+}
+.gender-card.selected svg { color: var(--accent); }
+
+/* Tabs: presets vs custom */
+.creator-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 1.25rem;
+}
+.creator-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.creator-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+.creator-mode { display: none; }
+.creator-mode.active { display: block; animation: up 0.25s cubic-bezier(0.22,1,0.36,1); }
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+
+.preset-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
+  user-select: none;
+}
+.preset-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+.preset-card.selected {
+  border-color: var(--accent);
+  background: var(--block-peach);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255,107,53,0.18);
+}
+
+.preset-avatar {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.08);
+  background: linear-gradient(135deg, var(--hair) 0%, var(--hair) 45%, var(--skin) 55%, var(--skin) 100%);
+  box-shadow: inset 0 -2px 6px rgba(0,0,0,0.1);
+}
+
+.preset-text { flex: 1; min-width: 0; }
+.preset-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.preset-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .preset-grid { grid-template-columns: 1fr; }
 }
 
 .chip.disabled {
@@ -1120,10 +1187,7 @@ textarea { min-height: 90px; }
 .multishot-hint.show { display: block; }
 
 @media (max-width: 768px) {
-  .creator-panel { grid-template-columns: 1fr; grid-template-rows: 320px 1fr; }
-  .creator-right { min-height: 320px; }
-  .av-scene { width: 220px; height: 300px; }
-  .av-prompt-box { display: none; }
+  .creator-panel { max-width: 100%; }
 }
 
 @media (max-width: 520px) {
@@ -1178,10 +1242,10 @@ textarea { min-height: 90px; }
       <div class="err" id="err1b">Selecciona un género para el nuevo personaje</div>
     </div>
 
-    <!-- STEP 2: Formato -->
+    <!-- STEP 2: Formato + Guion (combinados) -->
     <div class="step" data-step="2">
-      <div class="q">¿Qué tipo de clip?</div>
-      <div class="qhint">Define la estructura narrativa · cada clip dura ~5s</div>
+      <div class="q">¿Qué tipo de clip y qué dice?</div>
+      <div class="qhint">Elige el formato. Verás ejemplos de guion debajo y podrás editarlo.</div>
       <div class="opts c2" id="formato_video">
         <div class="opt" data-value="snapchat_hook">
           <span class="opt-icon">⚡</span>
@@ -1191,7 +1255,7 @@ textarea { min-height: 90px; }
         <div class="opt" data-value="hook">
           <span class="opt-icon">🎯</span>
           <span class="opt-label">Hook</span>
-          <span class="opt-desc">6-10 palabras · para el scroll · afirmación disruptiva</span>
+          <span class="opt-desc">Frase que detiene el scroll · afirmación disruptiva en 6-10 palabras</span>
         </div>
         <div class="opt" data-value="reveal">
           <span class="opt-icon">🔓</span>
@@ -1215,16 +1279,11 @@ textarea { min-height: 90px; }
         </div>
       </div>
 
-      <div class="toggle-row" id="frameFinToggle" onclick="toggleFrameFin()">
-        <div class="toggle-info">
-          <span class="toggle-label">Transición controlada entre frames</span>
-          <span class="toggle-sub">Genera frame inicio y frame fin distintos · define qué cambia</span>
-        </div>
-        <div class="toggle-switch"></div>
-      </div>
-
-      <div class="frame-fin-desc" id="frameFinDescWrap">
-        <textarea id="frame_fin_descripcion" placeholder="Describe qué debe cambiar en el frame fin — mismo personaje, mismo outfit. Ej: head lifted, eyes looking directly into camera, subtle confident smile"></textarea>
+      <div id="scriptBlock" style="display:none">
+        <div class="section-title" style="font-family:inherit;font-size:20px;font-weight:700;letter-spacing:normal;text-transform:none;color:var(--text)">Elige un guión o escríbelo</div>
+        <div class="template-chips" id="templateChips"></div>
+        <div class="template-preview" id="templatePreview">—</div>
+        <textarea id="script_custom" placeholder="O escribe tu propio guion aquí. La IA lo adaptará a la duración del formato y a tu producto."></textarea>
       </div>
 
       <div class="err" id="err2">Selecciona un formato</div>
@@ -1268,7 +1327,7 @@ textarea { min-height: 90px; }
         </div>
       </div>
 
-      <div class="section-title">Luz del día</div>
+      <div class="section-title" style="font-family:inherit;font-size:20px;font-weight:700;letter-spacing:normal;text-transform:none;color:var(--text)">Elige momento del día</div>
       <div class="chips" id="hora_dia">
         <div class="chip" data-value="mañana, luz suave difusa natural">🌤 Mañana</div>
         <div class="chip" data-value="golden hour, luz dorada cálida lateral">🌇 Golden hour</div>
@@ -1307,30 +1366,27 @@ textarea { min-height: 90px; }
         </div>
       </div>
 
-      <div class="section-title">Cámara</div>
+      <div class="section-title" style="font-family:inherit;font-size:20px;font-weight:700;letter-spacing:normal;text-transform:none;color:var(--text)">Elige tipo de grabación</div>
       <div class="chips" id="camara">
-        <div class="chip" data-value="medium close-up, handheld UGC, ligeramente inestable">📸 Handheld UGC</div>
-        <div class="chip" data-value="extreme close-up, estático, altura de ojos">🔍 Extreme close-up</div>
-        <div class="chip" data-value="medium shot, slow push-in, suave">🎯 Push-in suave</div>
+        <div class="chip" data-value="medium close-up, handheld UGC, ligeramente inestable">📸 Móvil en mano</div>
+        <div class="chip" data-value="extreme close-up, estático, altura de ojos">🔍 Primerísimo plano</div>
+        <div class="chip" data-value="medium shot, slow push-in, suave">🎯 Acercamiento suave</div>
         <div class="chip" data-value="plano fijo, estático, contemplativo">⬜ Plano fijo</div>
-        <div class="chip" data-value="multishot creative direction: 3 shots con ángulos distintos — shot 1: extreme close-up cara, shot 2: medium shot con contexto, shot 3: OTS o plano detalle. Cortes rápidos tipo director de cine. Cada shot con movimiento de cámara diferente." id="multishotChip">🎬 Multishot</div>
       </div>
-      <div class="multishot-hint" id="multishotHint">Multishot activa transición controlada entre frames automáticamente</div>
+
+      <div class="toggle-row" id="multishotToggle" onclick="toggleMultishot()">
+        <div class="toggle-info">
+          <span class="toggle-label">🎬 Multishot · 3 ángulos en el mismo clip</span>
+          <span class="toggle-sub">Cortes cinematográficos tipo director · sustituye la cámara de arriba</span>
+        </div>
+        <div class="toggle-switch"></div>
+      </div>
 
       <div class="err" id="err4">Selecciona tono visual y cámara</div>
     </div>
 
-    <!-- STEP 5: Script -->
+    <!-- STEP 5: Review -->
     <div class="step" data-step="5">
-      <div class="q">El guion</div>
-      <div class="qhint">Elige un template o escribe tu propio script. Se adaptará a tu producto.</div>
-      <div class="template-chips" id="templateChips"></div>
-      <div class="template-preview" id="templatePreview">Selecciona un template arriba</div>
-      <textarea id="script_custom" placeholder="O escribe aquí tu propio guion. La IA lo adaptará a la duración del formato y a tu producto."></textarea>
-    </div>
-
-    <!-- STEP 6: Review -->
-    <div class="step" data-step="6">
       <div class="q">Todo listo</div>
       <div class="qhint">Revisa y lanza el pipeline de producción</div>
       <div class="summary" id="summaryGrid"></div>
@@ -1372,120 +1428,88 @@ textarea { min-height: 90px; }
 <div id="creatorModal">
   <div class="creator-backdrop" onclick="closeCreator()"></div>
   <div class="creator-panel">
-    <!-- Left: Controls -->
-    <div class="creator-left">
-      <div class="creator-header">
-        <span class="creator-title">Diseña tu personaje</span>
-        <button class="creator-close" onclick="closeCreator()">✕</button>
-      </div>
 
-      <div class="field" style="margin-bottom:1rem">
-        <input type="text" id="nombre_sujeto" placeholder="Nombre del personaje" autocomplete="off" spellcheck="false" oninput="updateAvatarPreview()">
-      </div>
+    <div class="creator-header">
+      <span class="creator-title">Crear personaje</span>
+      <button class="creator-close" onclick="closeCreator()">✕</button>
+    </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Género</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="genero" data-value="mujer" onclick="selectGenderTrait(this)">Mujer</div>
-          <div class="trait-chip" data-trait="genero" data-value="hombre" onclick="selectGenderTrait(this)">Hombre</div>
+    <div class="creator-body">
+      <div class="form-row">
+        <label class="form-label">Nombre</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input type="text" class="form-input" id="cc_nombre" placeholder="Ej: Lucía" autocomplete="off" spellcheck="false">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Tono de piel</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="piel" data-value="very fair, porcelain skin" data-skin="1" onclick="selectTrait(this)">Muy clara</div>
-          <div class="trait-chip" data-trait="piel" data-value="fair, light skin" data-skin="2" onclick="selectTrait(this)">Clara</div>
-          <div class="trait-chip" data-trait="piel" data-value="medium, olive skin tone" data-skin="3" onclick="selectTrait(this)">Oliva</div>
-          <div class="trait-chip" data-trait="piel" data-value="tan, warm brown skin" data-skin="4" onclick="selectTrait(this)">Morena</div>
-          <div class="trait-chip" data-trait="piel" data-value="dark, deep brown skin" data-skin="5" onclick="selectTrait(this)">Oscura</div>
+      <div class="form-row">
+        <label class="form-label">Género</label>
+        <div class="gender-cards">
+          <div class="gender-card" data-gender="mujer" onclick="ccPickGender(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M12 14v8M9 19h6"/></svg>
+            <span>Mujer</span>
+          </div>
+          <div class="gender-card" data-gender="hombre" onclick="ccPickGender(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="5"/><path d="M19 5l-5.6 5.6M14 5h5v5"/></svg>
+            <span>Hombre</span>
+          </div>
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Forma del rostro</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="rostro" data-value="soft, rounded face with gentle features" data-face="round" onclick="selectTrait(this)">Redondeado</div>
-          <div class="trait-chip" data-trait="rostro" data-value="oval face, balanced proportions" data-face="oval" onclick="selectTrait(this)">Ovalado</div>
-          <div class="trait-chip" data-trait="rostro" data-value="angular face, sharp jawline, defined cheekbones" data-face="angular" onclick="selectTrait(this)">Angular</div>
-          <div class="trait-chip" data-trait="rostro" data-value="strong features, prominent nose, square jaw" data-face="square" onclick="selectTrait(this)">Cuadrado</div>
+      <div class="form-row">
+        <label class="form-label">Edad</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="number" min="1" max="120" class="form-input" id="cc_edad" placeholder="Ej: 28" autocomplete="off">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Color de ojos</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="ojos" data-value="brown eyes" data-eye="brown" onclick="selectTrait(this)">Marrones</div>
-          <div class="trait-chip" data-trait="ojos" data-value="dark brown, almost black eyes" data-eye="black" onclick="selectTrait(this)">Negro</div>
-          <div class="trait-chip" data-trait="ojos" data-value="green eyes" data-eye="green" onclick="selectTrait(this)">Verdes</div>
-          <div class="trait-chip" data-trait="ojos" data-value="blue eyes" data-eye="blue" onclick="selectTrait(this)">Azules</div>
-          <div class="trait-chip" data-trait="ojos" data-value="hazel, amber eyes" data-eye="hazel" onclick="selectTrait(this)">Miel</div>
+      <div class="form-row">
+        <label class="form-label">Origen / piel</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input type="text" class="form-input" id="cc_etnia" placeholder="Ej: latina, piel morena cálida" autocomplete="off">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Tipo de pelo</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="pelo_tipo" data-value="straight hair" onclick="selectTrait(this)">Liso</div>
-          <div class="trait-chip" data-trait="pelo_tipo" data-value="wavy hair" onclick="selectTrait(this)">Ondulado</div>
-          <div class="trait-chip" data-trait="pelo_tipo" data-value="curly hair" onclick="selectTrait(this)">Rizado</div>
-          <div class="trait-chip" data-trait="pelo_tipo" data-value="afro-textured, coily hair" onclick="selectTrait(this)">Afro</div>
-          <div class="trait-chip" data-trait="pelo_tipo" data-value="buzzcut, very short hair" onclick="selectTrait(this)">Rapado</div>
+      <div class="form-row">
+        <label class="form-label">Pelo</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16c0-6 3.5-12 8-12s8 6 8 12"/><path d="M4 16v4M20 16v4M8 14v6M12 13v7M16 14v6"/></svg>
+          <input type="text" class="form-input" id="cc_pelo" placeholder="Ej: largo, ondulado, castaño oscuro" autocomplete="off">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Largo de pelo</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="pelo_largo" data-value="short" onclick="selectTrait(this)">Corto</div>
-          <div class="trait-chip" data-trait="pelo_largo" data-value="medium-length" onclick="selectTrait(this)">Medio</div>
-          <div class="trait-chip" data-trait="pelo_largo" data-value="long, past shoulders" onclick="selectTrait(this)">Largo</div>
+      <div class="form-row">
+        <label class="form-label">Ojos</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <input type="text" class="form-input" id="cc_ojos" placeholder="Ej: marrones grandes, mirada cálida" autocomplete="off">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Color de pelo</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="pelo_color" data-value="jet black hair" data-hair="black" onclick="selectTrait(this)">Negro</div>
-          <div class="trait-chip" data-trait="pelo_color" data-value="dark brown hair" data-hair="dbrown" onclick="selectTrait(this)">Castaño osc</div>
-          <div class="trait-chip" data-trait="pelo_color" data-value="light brown hair" data-hair="lbrown" onclick="selectTrait(this)">Castaño claro</div>
-          <div class="trait-chip" data-trait="pelo_color" data-value="blonde hair" data-hair="blonde" onclick="selectTrait(this)">Rubio</div>
-          <div class="trait-chip" data-trait="pelo_color" data-value="red, auburn hair" data-hair="red" onclick="selectTrait(this)">Pelirrojo</div>
-          <div class="trait-chip" data-trait="pelo_color" data-value="platinum blonde, silver hair" data-hair="platinum" onclick="selectTrait(this)">Platino</div>
+      <div class="form-row">
+        <label class="form-label">Cuerpo</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><path d="M12 6v6M8 9h8M9 22l3-10 3 10M9 22h6"/></svg>
+          <input type="text" class="form-input" id="cc_cuerpo" placeholder="Ej: complexión atlética, estatura media" autocomplete="off">
         </div>
       </div>
 
-      <div class="trait-group">
-        <span class="trait-label">Complexión</span>
-        <div class="trait-chips">
-          <div class="trait-chip" data-trait="complexion" data-value="slim, slender build" onclick="selectTrait(this)">Delgada</div>
-          <div class="trait-chip" data-trait="complexion" data-value="athletic, fit build" onclick="selectTrait(this)">Atlética</div>
-          <div class="trait-chip" data-trait="complexion" data-value="average build, natural body" onclick="selectTrait(this)">Normal</div>
-          <div class="trait-chip" data-trait="complexion" data-value="curvy, full-figured" onclick="selectTrait(this)">Curvy</div>
+      <div class="form-row">
+        <label class="form-label">Estilo / vestuario</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h-3a2 2 0 1 1-2-2 2 2 0 0 1 2 2"/><path d="M16 4l5 3-3 4-2-1v10H8V10l-2 1-3-4 5-3"/></svg>
+          <input type="text" class="form-input" id="cc_estilo" placeholder="Ej: casual urbano, camiseta blanca y vaqueros" autocomplete="off">
         </div>
-      </div>
-
-      <div class="creator-confirm">
-        <button class="btn-create-char" onclick="confirmCreator()">Crear personaje →</button>
       </div>
     </div>
 
-    <!-- Right: 3D Preview -->
-    <div class="creator-right" id="creatorPreviewArea">
-      <div class="av-drag-hint">ARRASTRA PARA GIRAR</div>
-      <div class="av-platform"></div>
-      <div class="av-scene">
-        <canvas id="av3dCanvas"></canvas>
-      </div>
-      <div class="av-info">
-        <div class="av-name" id="avatarNameDisplay"></div>
-        <div class="av-desc" id="avatarSubtitle">nuevo personaje</div>
-      </div>
-      <div class="av-prompt-box">
-        <span class="av-prompt-label">Prompt de identidad</span>
-        <div class="av-prompt-text" id="avatarPromptText">Selecciona rasgos para construir la descripción...</div>
-      </div>
+    <div class="creator-foot">
+      <button class="btn-create-char" id="btnCreateChar" onclick="confirmCreator()" disabled>Pon un nombre</button>
     </div>
+
   </div>
 </div>
 
@@ -1601,16 +1625,29 @@ function selectLibChar(idx) {
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   fetchCharLibrary();
+  // Pre-populate sensible defaults to reduce friction
+  setTimeout(applyDefaults, 0);
 });
 
-const TOTAL_STEPS = 6;
+function applyDefaults() {
+  document.querySelector('#localizacion .opt')?.click();
+  const horaChips = document.querySelectorAll('#hora_dia .chip');
+  (horaChips[1] || horaChips[0])?.click();
+  document.querySelector('#tono_visual .opt')?.click();
+  document.querySelector('#camara .chip')?.click();
+}
+
+const TOTAL_STEPS = 5;
 let currentStep = 1;
+
+const MULTISHOT_VALUE = 'multishot creative direction: 3 shots con ángulos distintos — shot 1: extreme close-up cara, shot 2: medium shot con contexto, shot 3: OTS o plano detalle. Cortes rápidos tipo director de cine. Cada shot con movimiento de cámara diferente.';
 
 const S = {
   nombre_sujeto: '',
   genero: '',
   formato_video: '',
   usar_frame_fin: false,
+  usar_multishot: false,
   frame_fin_descripcion: '',
   localizacion: '',
   hora_dia: '',
@@ -1622,47 +1659,57 @@ const S = {
   avatar_descripcion: ''
 };
 
-// ── AVATAR TRAITS ────────────────────────────────────────
-const avatarTraits = {};
+// ── CHARACTER CREATOR (free-text form) ──────────────────
+// All inputs are free text. The string built here gets sent to Claude
+// as `avatar_descripcion` and shapes the character prompt.
+const CC_FIELDS = [
+  { id: 'cc_edad',   label: 'edad' },
+  { id: 'cc_etnia',  label: 'etnia/piel' },
+  { id: 'cc_pelo',   label: 'pelo' },
+  { id: 'cc_ojos',   label: 'ojos' },
+  { id: 'cc_cuerpo', label: 'cuerpo' },
+  { id: 'cc_estilo', label: 'estilo' }
+];
 
-function selectTrait(el) {
-  const trait = el.dataset.trait;
-  const value = el.dataset.value;
-  el.parentElement.querySelectorAll('.trait-chip').forEach(c => c.classList.remove('selected'));
+function ccPickGender(el) {
+  S.genero = el.dataset.gender;
+  el.parentElement.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
-  avatarTraits[trait] = { value, label: el.textContent.trim(), el };
-  selectedLibChar = null;
-  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-  updateAvatarPreview();
+  refreshConfirmButton();
 }
 
-function buildAvatarDescription() {
-  const nameInput = document.getElementById('nombre_sujeto');
-  const name = nameInput ? nameInput.value.trim() : '';
-  const gender = S.genero;
-  if (!name && !gender && Object.keys(avatarTraits).length === 0) return '';
+function buildCharacterDescription() {
   const parts = [];
-  if (gender) parts.push(gender === 'mujer' ? 'woman' : 'man');
-  if (avatarTraits.piel) parts.push(avatarTraits.piel.value);
-  if (avatarTraits.rostro) parts.push(avatarTraits.rostro.value);
-  if (avatarTraits.ojos) parts.push(avatarTraits.ojos.value);
-  if (avatarTraits.pelo_tipo) parts.push(avatarTraits.pelo_tipo.value);
-  if (avatarTraits.pelo_largo) parts.push(avatarTraits.pelo_largo.value);
-  if (avatarTraits.pelo_color) parts.push(avatarTraits.pelo_color.value);
-  if (avatarTraits.complexion) parts.push(avatarTraits.complexion.value);
+  if (S.genero) parts.push(S.genero === 'mujer' ? 'mujer' : 'hombre');
+  for (const f of CC_FIELDS) {
+    let v = (document.getElementById(f.id)?.value || '').trim();
+    if (!v) continue;
+    if (f.id === 'cc_edad') v = `${v} años`;
+    parts.push(v);
+  }
   return parts.join(', ');
 }
 
-// ── CREATOR MODAL ────────────────────────────────────────
+function refreshConfirmButton() {
+  const btn = document.getElementById('btnCreateChar');
+  if (!btn) return;
+  const name = (document.getElementById('cc_nombre')?.value || '').trim();
+  const ready = !!(name && S.genero);
+  btn.disabled = !ready;
+  btn.textContent = ready ? 'Crear personaje →'
+                          : (!name ? 'Pon un nombre' : 'Elige género');
+}
+
 function openCreator() {
   document.getElementById('creatorModal').classList.add('open');
   document.body.style.overflow = 'hidden';
-  // Wait for modal to be visible so canvas has dimensions
-  requestAnimationFrame(() => {
-    initAvatar3D();
-    initDragRotation();
-    updateAvatarPreview();
-  });
+  // Wire input listeners once
+  const ids = ['cc_nombre', ...CC_FIELDS.map(f => f.id)];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && !el._wired) { el.addEventListener('input', refreshConfirmButton); el._wired = true; }
+  }
+  refreshConfirmButton();
 }
 
 function closeCreator() {
@@ -1671,14 +1718,15 @@ function closeCreator() {
 }
 
 function confirmCreator() {
-  const nameInput = document.getElementById('nombre_sujeto');
-  const name = nameInput ? nameInput.value.trim() : '';
+  const name = (document.getElementById('cc_nombre')?.value || '').trim();
   if (!name || !S.genero) {
-    alert('Introduce un nombre y selecciona un género');
+    alert('Pon un nombre y selecciona el género');
     return;
   }
+  const descripcion = buildCharacterDescription();
+
   S.nombre_sujeto = name;
-  S.avatar_descripcion = buildAvatarDescription();
+  S.avatar_descripcion = descripcion;
   selectedLibChar = null;
   closeCreator();
 
@@ -1687,633 +1735,16 @@ function confirmCreator() {
   const icon = document.getElementById('createdCharIcon');
   const nameEl = document.getElementById('createdCharName');
   const descEl = document.getElementById('createdCharDesc');
-  icon.textContent = S.genero === 'mujer' ? '♀' : '♂';
-  nameEl.textContent = name;
-  descEl.textContent = S.avatar_descripcion || S.genero;
-  card.style.display = 'flex';
-
-  // Change button text
-  document.querySelector('.create-new-btn').textContent = '↻ Editar personaje';
-
-  document.getElementById('err1').classList.remove('show');
-  document.getElementById('err1b').classList.remove('show');
-}
-
-// ── THREE.JS 3D AVATAR ───────────────────────────────────
-const SKIN_COLORS = { '1': '#fde7d6', '2': '#f5d0b0', '3': '#d4a574', '4': '#a67c52', '5': '#6b4423' };
-const HAIR_COLORS = { 'black': '#1a1a1a', 'dbrown': '#3d2314', 'lbrown': '#8b6842', 'blonde': '#d4a853', 'red': '#a0522d', 'platinum': '#e0d8c8' };
-const EYE_COLORS = { 'brown eyes': '#4a3728', 'dark brown, almost black eyes': '#1a1208', 'green eyes': '#2d6b3f', 'blue eyes': '#3a6fa8', 'hazel, amber eyes': '#8b6914' };
-
-let avRenderer, avScene, avCamera, avGroup;
-let avInited = false;
-
-function initAvatar3D() {
-  if (avInited) { handleResize(); return; }
-  const canvas = document.getElementById('av3dCanvas');
-  if (!canvas || typeof THREE === 'undefined') return;
-  avInited = true;
-
-  const w = canvas.clientWidth || 280;
-  const h = canvas.clientHeight || 380;
-
-  avScene = new THREE.Scene();
-  avCamera = new THREE.PerspectiveCamera(28, w / h, 0.1, 100);
-  avCamera.position.set(0, 1.7, 6.8);
-  avCamera.lookAt(0, 1.5, 0);
-
-  avRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  avRenderer.setSize(w, h, false);
-  avRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  avRenderer.shadowMap.enabled = false;
-
-  // Lighting — three-point setup for cinematic look
-  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-  avScene.add(ambient);
-
-  const key = new THREE.DirectionalLight(0xffffff, 1.1);
-  key.position.set(3, 5, 4);
-  avScene.add(key);
-
-  const fill = new THREE.DirectionalLight(0x88aaff, 0.35);
-  fill.position.set(-4, 2, 3);
-  avScene.add(fill);
-
-  const rim = new THREE.DirectionalLight(0xff6b35, 0.7);
-  rim.position.set(0, 3, -5);
-  avScene.add(rim);
-
-  // Ground glow
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(1.2, 32),
-    new THREE.MeshBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0.08 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.95;
-  avScene.add(ground);
-
-  avGroup = new THREE.Group();
-  avScene.add(avGroup);
-
-  buildHumanoid();
-
-  function animate() {
-    if (!avInited) return;
-    requestAnimationFrame(animate);
-    avRenderer.render(avScene, avCamera);
-  }
-  animate();
-
-  window.addEventListener('resize', handleResize);
-}
-
-function handleResize() {
-  const canvas = document.getElementById('av3dCanvas');
-  if (!canvas || !avRenderer || !avCamera) return;
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  avCamera.aspect = w / h;
-  avCamera.updateProjectionMatrix();
-  avRenderer.setSize(w, h, false);
-}
-
-function disposeChildren(group) {
-  while (group.children.length) {
-    const c = group.children[0];
-    group.remove(c);
-    if (c.geometry) c.geometry.dispose();
-    if (c.material) {
-      if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
-      else c.material.dispose();
-    }
-  }
-}
-
-function buildHumanoid() {
-  if (!avGroup) return;
-  disposeChildren(avGroup);
-
-  // ═════════════════════════════════════════════════════
-  // ANATOMICAL REFERENCE (7-head proportions)
-  // Head height: 0.34u → total body ≈ 2.4u
-  // Body landmarks (Y coordinates):
-  //   Top of head:    2.40
-  //   Eyes:           2.18
-  //   Chin:           2.06
-  //   Neck base:      1.92
-  //   Shoulders:      1.92
-  //   Nipple line:    1.74
-  //   Waist:          1.55
-  //   Crotch:         1.20
-  //   Knees:          0.65
-  //   Feet:           0.00
-  // ═════════════════════════════════════════════════════
-
-  // ─── Read traits ───
-  const skinKey = avatarTraits.piel?.el?.dataset?.skin || '3';
-  const skinHex = SKIN_COLORS[skinKey] || '#d4a574';
-  const hairKey = avatarTraits.pelo_color?.el?.dataset?.hair || 'dbrown';
-  const hairHex = HAIR_COLORS[hairKey] || '#3d2314';
-  const eyeVal = avatarTraits.ojos?.value || 'brown eyes';
-  const eyeHex = EYE_COLORS[eyeVal] || '#4a3728';
-  const gender = S.genero || 'mujer';
-  const cx = avatarTraits.complexion?.value || '';
-  const faceKey = avatarTraits.rostro?.el?.dataset?.face || 'oval';
-
-  // ─── Materials ───
-  const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.6, metalness: 0 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.7, metalness: 0.08 });
-  const eyeMat = new THREE.MeshStandardMaterial({ color: eyeHex, roughness: 0.15, metalness: 0.2 });
-  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8f5ee, roughness: 0.2 });
-  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x050505 });
-  const shirtColor = gender === 'mujer' ? 0xd14d6c : 0x4674b3;
-  const pantsColor = 0x232a3a;
-  const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.85 });
-  const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.9 });
-  const lipColor = new THREE.Color(skinHex).lerp(new THREE.Color(0xb83d52), 0.55);
-  const lipMat = new THREE.MeshStandardMaterial({ color: lipColor, roughness: 0.4 });
-  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.55 });
-
-  // ─── Body proportions ───
-  // Female: narrower shoulders, wider hips, hourglass
-  // Male: wider shoulders V-shape, narrower hips
-  let shoulderW = gender === 'mujer' ? 0.27 : 0.34;
-  let waistW    = gender === 'mujer' ? 0.18 : 0.22;
-  let hipW      = gender === 'mujer' ? 0.26 : 0.22;
-  let chestDepth = gender === 'mujer' ? 0.85 : 1.0;
-  let bustAmount = gender === 'mujer' ? 0.06 : 0;
-
-  if (cx.includes('slim')) {
-    shoulderW *= 0.85; waistW *= 0.75; hipW *= 0.85; chestDepth *= 0.88;
-    bustAmount *= 0.7;
-  } else if (cx.includes('athletic')) {
-    shoulderW *= 1.20; waistW *= 0.88; hipW *= 0.95; chestDepth *= 1.10;
-  } else if (cx.includes('curvy')) {
-    shoulderW *= 0.95; waistW *= 1.05; hipW *= 1.30; chestDepth *= 1.10;
-    bustAmount *= 1.6;
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // SINGLE CONTINUOUS TRUNK (crotch → shoulders) via Lathe
-  // No more disconnected pelvis/torso/neck
-  // ═══════════════════════════════════════════════════════
-  const trunkPoints = [
-    new THREE.Vector2(0.001, 1.18),                 // crotch center
-    new THREE.Vector2(hipW * 0.45, 1.20),           // crotch outer
-    new THREE.Vector2(hipW * 0.95, 1.30),           // upper hip
-    new THREE.Vector2(hipW, 1.45),                  // hip bone
-    new THREE.Vector2(hipW * 0.85, 1.55),           // upper hip
-    new THREE.Vector2(waistW, 1.65),                // waist narrow
-    new THREE.Vector2(waistW * 1.05, 1.75),         // upper waist
-    new THREE.Vector2(shoulderW * 0.65, 1.82),      // lower ribs
-    new THREE.Vector2(shoulderW * 0.85, 1.88),      // upper ribs
-    new THREE.Vector2(shoulderW * 0.95, 1.93),      // chest
-    new THREE.Vector2(shoulderW, 1.97),             // shoulder peak
-    new THREE.Vector2(shoulderW * 0.85, 2.00),      // shoulder slope
-    new THREE.Vector2(shoulderW * 0.55, 2.02),      // collar
-    new THREE.Vector2(shoulderW * 0.30, 2.04),      // neck root
-    new THREE.Vector2(0.10, 2.05),                  // neck base
-  ];
-  const trunkGeo = new THREE.LatheGeometry(trunkPoints, 40);
-  trunkGeo.scale(1, 1, chestDepth);
-  // We need separate materials for shirt vs pants region — easier: clip with two meshes
-  // Actually use vertex colors / groups. Simpler: shirt covers from waist up, pants below
-  const trunk = new THREE.Mesh(trunkGeo, shirtMat);
-  avGroup.add(trunk);
-
-  // Pants overlay (separate lathe just for hip region)
-  const pantsPoints = [
-    new THREE.Vector2(0.001, 1.18),
-    new THREE.Vector2(hipW * 0.45, 1.20),
-    new THREE.Vector2(hipW * 0.97, 1.30),
-    new THREE.Vector2(hipW * 1.02, 1.45),
-    new THREE.Vector2(hipW * 0.87, 1.55),
-    new THREE.Vector2(waistW * 1.02, 1.62),
-  ];
-  const pantsTopGeo = new THREE.LatheGeometry(pantsPoints, 40);
-  pantsTopGeo.scale(1, 1, chestDepth);
-  const pantsTop = new THREE.Mesh(pantsTopGeo, pantsMat);
-  avGroup.add(pantsTop);
-
-  // ─── Bust (women) — embedded in chest, not floating ───
-  if (gender === 'mujer' && bustAmount > 0.03) {
-    const bustGeo = new THREE.SphereGeometry(bustAmount * 1.6, 18, 18);
-    const bustZ = chestDepth * shoulderW * 0.95;
-    const bustL = new THREE.Mesh(bustGeo, shirtMat);
-    bustL.position.set(-bustAmount * 1.4, 1.83, bustZ);
-    bustL.scale.set(1, 0.9, 0.85);
-    avGroup.add(bustL);
-    const bustR = new THREE.Mesh(bustGeo, shirtMat);
-    bustR.position.set(bustAmount * 1.4, 1.83, bustZ);
-    bustR.scale.set(1, 0.9, 0.85);
-    avGroup.add(bustR);
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // HEAD — sits directly on neck top
-  // ═══════════════════════════════════════════════════════
-  let headW = 0.16, headH = 0.20, headD = 0.18;
-  if (faceKey === 'round')   { headW = 0.18; headH = 0.18; headD = 0.18; }
-  if (faceKey === 'oval')    { headW = 0.15; headH = 0.21; headD = 0.17; }
-  if (faceKey === 'angular') { headW = 0.14; headH = 0.21; headD = 0.16; }
-  if (faceKey === 'square')  { headW = 0.17; headH = 0.18; headD = 0.17; }
-
-  const headCenterY = 2.20;
-
-  const headGeo = new THREE.SphereGeometry(1, 64, 64);
-  const pos = headGeo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    // Flatten back of head slightly
-    if (z < -0.4) z *= 0.85;
-    // Chin taper for oval/angular
-    if (y < -0.3) {
-      const taperAmt = (faceKey === 'angular' || faceKey === 'oval') ? 0.7 : 0.85;
-      const t = (y + 0.3) / -0.7; // 0 to 1
-      const factor = 1 - (1 - taperAmt) * t;
-      x *= factor;
-      z *= Math.max(factor, 0.7);
-    }
-    // Square jaw widening
-    if (faceKey === 'square' && y < -0.15 && y > -0.6) {
-      x *= 1.15;
-    }
-    // Forehead slight extension forward
-    if (y > 0.2 && z > 0) z *= 1.05;
-    pos.setXYZ(i, x, y, z);
-  }
-  pos.needsUpdate = true;
-  headGeo.computeVertexNormals();
-
-  const head = new THREE.Mesh(headGeo, skinMat);
-  head.scale.set(headW, headH, headD);
-  head.position.y = headCenterY;
-  avGroup.add(head);
-
-  // Eye Y position relative to head center: about 0 (middle of head)
-  const eyeY = headCenterY + 0.005;
-  const eyeZ = headD * 0.95;
-  const eyeOffsetX = headW * 0.42;
-
-  // ─── Ears (attached to sides at eye level) ───
-  const earGeo = new THREE.SphereGeometry(0.022, 14, 14);
-  const earL = new THREE.Mesh(earGeo, skinMat);
-  earL.position.set(-headW * 1.0, eyeY - 0.005, 0);
-  earL.scale.set(0.55, 1.5, 0.85);
-  avGroup.add(earL);
-  const earR = new THREE.Mesh(earGeo, skinMat);
-  earR.position.set(headW * 1.0, eyeY - 0.005, 0);
-  earR.scale.set(0.55, 1.5, 0.85);
-  avGroup.add(earR);
-
-  // ─── Eyes ───
-  const eyeWhiteGeo = new THREE.SphereGeometry(0.026, 18, 18);
-  const eyeWL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-  eyeWL.position.set(-eyeOffsetX, eyeY, eyeZ);
-  avGroup.add(eyeWL);
-  const eyeWR = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-  eyeWR.position.set(eyeOffsetX, eyeY, eyeZ);
-  avGroup.add(eyeWR);
-
-  const irisGeo = new THREE.SphereGeometry(0.014, 16, 16);
-  const irisL = new THREE.Mesh(irisGeo, eyeMat);
-  irisL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.014);
-  avGroup.add(irisL);
-  const irisR = new THREE.Mesh(irisGeo, eyeMat);
-  irisR.position.set(eyeOffsetX, eyeY, eyeZ + 0.014);
-  avGroup.add(irisR);
-
-  const pupilGeo = new THREE.SphereGeometry(0.006, 12, 12);
-  const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-  pupilL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.022);
-  avGroup.add(pupilL);
-  const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-  pupilR.position.set(eyeOffsetX, eyeY, eyeZ + 0.022);
-  avGroup.add(pupilR);
-
-  // ─── Eyebrows ───
-  const browMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.85 });
-  const browGeo = new THREE.BoxGeometry(0.05, 0.008, 0.012);
-  const browL = new THREE.Mesh(browGeo, browMat);
-  browL.position.set(-eyeOffsetX, eyeY + 0.038, eyeZ + 0.005);
-  browL.rotation.z = 0.08;
-  avGroup.add(browL);
-  const browR = new THREE.Mesh(browGeo, browMat);
-  browR.position.set(eyeOffsetX, eyeY + 0.038, eyeZ + 0.005);
-  browR.rotation.z = -0.08;
-  avGroup.add(browR);
-
-  // ─── Nose (bridge + tip) ───
-  const noseBridge = new THREE.Mesh(
-    new THREE.BoxGeometry(0.02, 0.06, 0.04),
-    skinMat
-  );
-  noseBridge.position.set(0, eyeY - 0.025, eyeZ + 0.02);
-  avGroup.add(noseBridge);
-  const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.02, 14, 14), skinMat);
-  noseTip.position.set(0, eyeY - 0.05, eyeZ + 0.035);
-  noseTip.scale.set(1, 0.85, 1);
-  avGroup.add(noseTip);
-
-  // ─── Mouth (upper + lower lip) ───
-  const lipGeo = new THREE.SphereGeometry(0.022, 16, 12);
-  const upperLip = new THREE.Mesh(lipGeo, lipMat);
-  upperLip.position.set(0, eyeY - 0.085, eyeZ + 0.005);
-  upperLip.scale.set(1.5, 0.4, 0.5);
-  avGroup.add(upperLip);
-  const lowerLip = new THREE.Mesh(lipGeo, lipMat);
-  lowerLip.position.set(0, eyeY - 0.105, eyeZ + 0.005);
-  lowerLip.scale.set(1.3, 0.45, 0.55);
-  avGroup.add(lowerLip);
-
-  // ─── Hair ───
-  buildHair(headW, headH, headD, headCenterY, hairMat, hairHex);
-
-  // ═══════════════════════════════════════════════════════
-  // ARMS — connected to shoulders
-  // ═══════════════════════════════════════════════════════
-  const shoulderY = 1.95;
-  const shoulderX = shoulderW * 0.92;
-  const upperArmLen = 0.38;
-  const upperArmGeo = new THREE.CylinderGeometry(0.052, 0.045, upperArmLen, 16);
-
-  const upperArmL = new THREE.Mesh(upperArmGeo, shirtMat);
-  upperArmL.position.set(-shoulderX - 0.025, shoulderY - upperArmLen / 2 + 0.02, 0);
-  upperArmL.rotation.z = 0.12;
-  avGroup.add(upperArmL);
-  const upperArmR = new THREE.Mesh(upperArmGeo, shirtMat);
-  upperArmR.position.set(shoulderX + 0.025, shoulderY - upperArmLen / 2 + 0.02, 0);
-  upperArmR.rotation.z = -0.12;
-  avGroup.add(upperArmR);
-
-  // Shoulder caps (sphere joint) for smooth connection
-  const shoulderCapGeo = new THREE.SphereGeometry(0.058, 16, 16);
-  const shoulderCapL = new THREE.Mesh(shoulderCapGeo, shirtMat);
-  shoulderCapL.position.set(-shoulderX - 0.005, shoulderY + 0.01, 0);
-  avGroup.add(shoulderCapL);
-  const shoulderCapR = new THREE.Mesh(shoulderCapGeo, shirtMat);
-  shoulderCapR.position.set(shoulderX + 0.005, shoulderY + 0.01, 0);
-  avGroup.add(shoulderCapR);
-
-  // Forearms (skin)
-  const forearmLen = 0.36;
-  const forearmGeo = new THREE.CylinderGeometry(0.043, 0.035, forearmLen, 16);
-  const elbowY = shoulderY - upperArmLen + 0.02;
-  const forearmL = new THREE.Mesh(forearmGeo, skinMat);
-  forearmL.position.set(-shoulderX - 0.07, elbowY - forearmLen / 2 + 0.02, 0);
-  forearmL.rotation.z = 0.10;
-  avGroup.add(forearmL);
-  const forearmR = new THREE.Mesh(forearmGeo, skinMat);
-  forearmR.position.set(shoulderX + 0.07, elbowY - forearmLen / 2 + 0.02, 0);
-  forearmR.rotation.z = -0.10;
-  avGroup.add(forearmR);
-
-  // Hands
-  const handGeo = new THREE.SphereGeometry(0.05, 14, 14);
-  const handY = elbowY - forearmLen + 0.02;
-  const handL = new THREE.Mesh(handGeo, skinMat);
-  handL.position.set(-shoulderX - 0.105, handY, 0);
-  handL.scale.set(0.85, 1.25, 0.55);
-  avGroup.add(handL);
-  const handR = new THREE.Mesh(handGeo, skinMat);
-  handR.position.set(shoulderX + 0.105, handY, 0);
-  handR.scale.set(0.85, 1.25, 0.55);
-  avGroup.add(handR);
-
-  // ═══════════════════════════════════════════════════════
-  // LEGS — connected at crotch, taper toward feet
-  // ═══════════════════════════════════════════════════════
-  const crotchY = 1.18;
-  const legSpread = hipW * 0.45;
-  const thighLen = 0.62;
-  const thighGeo = new THREE.CylinderGeometry(0.085, 0.065, thighLen, 16);
-  const thighL = new THREE.Mesh(thighGeo, pantsMat);
-  thighL.position.set(-legSpread, crotchY - thighLen / 2, 0);
-  avGroup.add(thighL);
-  const thighR = new THREE.Mesh(thighGeo, pantsMat);
-  thighR.position.set(legSpread, crotchY - thighLen / 2, 0);
-  avGroup.add(thighR);
-
-  // Knee joints
-  const kneeGeo = new THREE.SphereGeometry(0.067, 14, 14);
-  const kneeY = crotchY - thighLen;
-  const kneeL = new THREE.Mesh(kneeGeo, pantsMat);
-  kneeL.position.set(-legSpread, kneeY, 0);
-  avGroup.add(kneeL);
-  const kneeR = new THREE.Mesh(kneeGeo, pantsMat);
-  kneeR.position.set(legSpread, kneeY, 0);
-  avGroup.add(kneeR);
-
-  // Calves
-  const calfLen = 0.55;
-  const calfGeo = new THREE.CylinderGeometry(0.06, 0.04, calfLen, 16);
-  const calfL = new THREE.Mesh(calfGeo, pantsMat);
-  calfL.position.set(-legSpread, kneeY - calfLen / 2, 0);
-  avGroup.add(calfL);
-  const calfR = new THREE.Mesh(calfGeo, pantsMat);
-  calfR.position.set(legSpread, kneeY - calfLen / 2, 0);
-  avGroup.add(calfR);
-
-  // Feet (shoes)
-  const footY = kneeY - calfLen;
-  const footGeo = new THREE.BoxGeometry(0.10, 0.05, 0.20);
-  const footL = new THREE.Mesh(footGeo, shoeMat);
-  footL.position.set(-legSpread, footY - 0.005, 0.04);
-  avGroup.add(footL);
-  const footR = new THREE.Mesh(footGeo, shoeMat);
-  footR.position.set(legSpread, footY - 0.005, 0.04);
-  avGroup.add(footR);
-
-  // Center: feet should touch the ground (y=0)
-  // footY = 1.18 - 0.62 - 0.55 = 0.01, so feet bottom is at 0.01 - 0.025 = -0.015
-  // Lift the whole group so feet sit at y = -0.6 (visible above ground glow)
-  avGroup.position.y = -0.6;
-}
-
-function buildHair(headW, headH, headD, headY, hairMat, hairHex) {
-  const tipo = avatarTraits.pelo_tipo?.value || '';
-  const largo = avatarTraits.pelo_largo?.value || 'short';
-
-  // The HAIR LINE — vertical position where hair starts on the forehead
-  // Should be just above the eyebrows, not over the eyes
-  // Eyes are at headY+0.005, brows at headY+0.038, so hair starts at headY+0.06
-  const hairLineY = headY + 0.06;
-
-  // BUZZCUT — tight cap, only top of head, doesn't go below brow
-  if (tipo.includes('buzzcut')) {
-    const capGeo = new THREE.SphereGeometry(1, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.45);
-    const cap = new THREE.Mesh(capGeo, hairMat);
-    cap.scale.set(headW * 1.04, headH * 0.95, headD * 1.04);
-    cap.position.y = headY + 0.02;
-    avGroup.add(cap);
-    return;
-  }
-
-  // AFRO — large poofy ball around upper head
-  if (tipo.includes('afro')) {
-    const afroGeo = new THREE.SphereGeometry(1, 32, 32);
-    const afroPos = afroGeo.attributes.position;
-    for (let i = 0; i < afroPos.count; i++) {
-      const x = afroPos.getX(i), y = afroPos.getY(i), z = afroPos.getZ(i);
-      if (y > -0.3) {
-        const n = (Math.sin(x * 10) + Math.cos(y * 10) + Math.sin(z * 10)) * 0.07;
-        afroPos.setX(i, x + n);
-        afroPos.setY(i, y + n * 0.5);
-        afroPos.setZ(i, z + n);
-      }
-    }
-    afroPos.needsUpdate = true;
-    afroGeo.computeVertexNormals();
-    const afro = new THREE.Mesh(afroGeo, hairMat);
-    afro.scale.set(headW * 1.7, headH * 1.4, headD * 1.7);
-    afro.position.y = headY + 0.06;
-    avGroup.add(afro);
-    return;
-  }
-
-  const isCurly = tipo.includes('curly') || tipo.includes('coily');
-  const isWavy = tipo.includes('wavy');
-
-  // ─── Top skull cap (only upper hemisphere, doesn't reach face) ───
-  const capGeo = new THREE.SphereGeometry(1, 48, 48, 0, Math.PI * 2, 0, Math.PI * 0.55);
-  if (isCurly) {
-    const p = capGeo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const n = (Math.sin(x * 14) + Math.cos(z * 14) + Math.sin(y * 10)) * 0.035;
-      p.setX(i, x + n);
-      p.setY(i, y + n * 0.3);
-      p.setZ(i, z + n);
-    }
-    p.needsUpdate = true;
-    capGeo.computeVertexNormals();
-  } else if (isWavy) {
-    const p = capGeo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), z = p.getZ(i);
-      const n = Math.sin(x * 6 + z * 4) * 0.018;
-      p.setY(i, p.getY(i) + n);
-    }
-    p.needsUpdate = true;
-    capGeo.computeVertexNormals();
-  }
-  const cap = new THREE.Mesh(capGeo, hairMat);
-  cap.scale.set(headW * 1.06, headH * 1.05, headD * 1.06);
-  cap.position.y = headY + 0.03;
-  avGroup.add(cap);
-
-  const isLong = largo.includes('long') || largo.includes('past');
-  const isMedium = largo.includes('medium');
-
-  // ─── Falling hair (medium/long only) — behind ears, falls down ───
-  if (isLong || isMedium) {
-    const length = isLong ? 0.55 : 0.28;
-    const baseR = headW * 1.05;
-    const tipR = isCurly ? baseR * 1.15 : baseR * 0.95;
-
-    const hairFallPoints = [];
-    const segments = 14;
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      const r = baseR + (tipR - baseR) * t;
-      const y = -t * length;
-      hairFallPoints.push(new THREE.Vector2(r, y));
-    }
-    const fallGeo = new THREE.LatheGeometry(hairFallPoints, 28);
-    // Squash front-back so it stays behind the head
-    fallGeo.scale(1, 1, 0.8);
-
-    if (isCurly || isWavy) {
-      const p = fallGeo.attributes.position;
-      for (let i = 0; i < p.count; i++) {
-        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-        const freq = isCurly ? 14 : 6;
-        const amp = isCurly ? 0.012 : 0.008;
-        const n = (Math.sin(y * freq + x * 3) + Math.cos(z * freq)) * amp;
-        p.setX(i, x + n);
-        p.setZ(i, z + n);
-      }
-      p.needsUpdate = true;
-      fallGeo.computeVertexNormals();
-    }
-
-    const hairFallMat = new THREE.MeshStandardMaterial({
-      color: hairHex, roughness: 0.7, side: THREE.DoubleSide, metalness: 0.08
-    });
-    const fall = new THREE.Mesh(fallGeo, hairFallMat);
-    fall.position.set(0, hairLineY - 0.02, -0.005);
-    avGroup.add(fall);
-  }
-
-  // ─── Front fringe (small wedge above forehead, NOT over eyes) ───
-  const bangsGeo = new THREE.SphereGeometry(1, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.32);
-  const bangs = new THREE.Mesh(bangsGeo, hairMat);
-  bangs.scale.set(headW * 1.0, headH * 0.28, headD * 0.6);
-  bangs.position.set(0, hairLineY + 0.02, headD * 0.5);
-  bangs.rotation.x = -0.1;
-  avGroup.add(bangs);
-}
-
-function updateAvatar3D() {
-  if (!avInited) initAvatar3D();
-  buildHumanoid();
-}
-
-// ── DRAG TO ROTATE ──────────────────────────────────────
-function initDragRotation() {
-  const canvas = document.getElementById('av3dCanvas');
-  if (!canvas || canvas._dragInit) return;
-  canvas._dragInit = true;
-
-  let dragging = false, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
-
-  function onDown(x, y) {
-    dragging = true;
-    startX = x;
-    startY = y;
-    if (avGroup) {
-      startRotY = avGroup.rotation.y;
-      startRotX = avGroup.rotation.x;
-    }
-  }
-  function onMove(x, y) {
-    if (!dragging || !avGroup) return;
-    avGroup.rotation.y = startRotY + (x - startX) * 0.01;
-    avGroup.rotation.x = Math.max(-0.4, Math.min(0.4, startRotX + (y - startY) * 0.005));
-  }
-  function onUp() { dragging = false; }
-
-  canvas.addEventListener('mousedown', e => { onDown(e.clientX, e.clientY); e.preventDefault(); });
-  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', onUp);
-  canvas.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-  window.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    onMove(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-  window.addEventListener('touchend', onUp);
-}
-
-function updateAvatarPreview() {
-  const nameInput = document.getElementById('nombre_sujeto');
-  if (!nameInput) return;
-  const name = nameInput.value.trim();
-  const desc = buildAvatarDescription();
-  S.avatar_descripcion = desc;
-
-  updateAvatar3D();
-
-  const nameDisplay = document.getElementById('avatarNameDisplay');
-  if (nameDisplay) nameDisplay.textContent = name || '';
-
-  const subtitle = document.getElementById('avatarSubtitle');
-  if (subtitle) {
-    const parts = [];
-    if (S.genero) parts.push(S.genero);
-    subtitle.textContent = parts.length ? parts.join(' · ') : 'nuevo personaje';
-  }
-
-  const promptText = document.getElementById('avatarPromptText');
-  if (promptText) promptText.textContent = desc || 'Selecciona rasgos para construir la descripción...';
+  if (icon) icon.textContent = S.genero === 'mujer' ? '♀' : '♂';
+  if (nameEl) nameEl.textContent = name;
+  if (descEl) descEl.textContent = descripcion || S.genero;
+  if (card) card.style.display = 'flex';
+
+  const createBtn = document.querySelector('.create-new-btn');
+  if (createBtn) createBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Editar personaje';
+
+  document.getElementById('err1')?.classList.remove('show');
+  document.getElementById('err1b')?.classList.remove('show');
 }
 
 // ── TEMPLATES — calibrados para 5s de audio (~15-25 palabras) ──
@@ -2390,20 +1821,9 @@ function updateProgress() {
   }
 }
 
-// ── GENDER (from creator trait chip) ─────────────────────
-function selectGenderTrait(el) {
-  const g = el.dataset.value;
-  S.genero = g;
-  el.parentElement.querySelectorAll('.trait-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedLibChar = null;
-  updateAvatarPreview();
-}
-
 function selectGender(g) {
   S.genero = g;
   selectedLibChar = null;
-  updateAvatarPreview();
 }
 
 // ── OPTION SELECTION ──────────────────────────────────────
@@ -2416,6 +1836,7 @@ document.querySelectorAll('.opts .opt').forEach(opt => {
     S[key] = this.dataset.value;
     if (key === 'formato_video') {
       currentTemplateIdx = 0;
+      document.getElementById('scriptBlock').style.display = 'block';
       renderTemplates(S.formato_video);
     }
   });
@@ -2430,14 +1851,12 @@ document.querySelectorAll('.chips .chip').forEach(chip => {
     this.classList.add('selected');
     S[key] = this.dataset.value;
 
-    // Multishot → auto-enable frame_fin
-    if (key === 'camara' && this.id === 'multishotChip') {
-      if (!S.usar_frame_fin) {
-        toggleFrameFin();
-      }
-      document.getElementById('multishotHint').classList.add('show');
-    } else if (key === 'camara') {
-      document.getElementById('multishotHint').classList.remove('show');
+    // Selecting a manual camera chip turns multishot OFF
+    if (key === 'camara' && S.usar_multishot) {
+      const mt = document.getElementById('multishotToggle');
+      mt?.classList.remove('active');
+      S.usar_multishot = false;
+      S.usar_frame_fin = false;
     }
   });
 });
@@ -2473,20 +1892,21 @@ function selectTemplate(idx) {
   });
 }
 
-// ── FRAME FIN TOGGLE ──────────────────────────────────────
-function toggleFrameFin() {
-  S.usar_frame_fin = !S.usar_frame_fin;
-  const toggle = document.getElementById('frameFinToggle');
-  const desc = document.getElementById('frameFinDescWrap');
-  toggle.classList.toggle('active', S.usar_frame_fin);
-  desc.classList.toggle('show', S.usar_frame_fin);
-
-  // If turning off frame_fin and multishot is selected, deselect multishot
-  if (!S.usar_frame_fin && S.camara?.startsWith('multishot')) {
-    const multishotChip = document.getElementById('multishotChip');
-    if (multishotChip) multishotChip.classList.remove('selected');
-    S.camara = '';
-    document.getElementById('multishotHint').classList.remove('show');
+// ── MULTISHOT TOGGLE ──────────────────────────────────────
+// Una sola opción visible. Internamente activa frame_fin para que Kling
+// genere los cortes entre planos correctamente.
+function toggleMultishot() {
+  const toggle = document.getElementById('multishotToggle');
+  const on = !toggle.classList.contains('active');
+  toggle.classList.toggle('active', on);
+  S.usar_multishot = on;
+  S.usar_frame_fin = on;
+  if (on) {
+    document.querySelectorAll('#camara .chip').forEach(c => c.classList.remove('selected'));
+    S.camara = MULTISHOT_VALUE;
+  } else {
+    const def = document.querySelector('#camara .chip');
+    if (def) { def.classList.add('selected'); S.camara = def.dataset.value; }
   }
 }
 
@@ -2494,18 +1914,17 @@ function toggleFrameFin() {
 // ── SUMMARY ──────────────────────────────────────────────
 function buildSummary() {
   const grid = document.getElementById('summaryGrid');
-  const isMultishot = S.camara?.startsWith('multishot');
   const avatarDesc = S.avatar_descripcion;
+  const scriptText = S.script_custom || S.template_script || '';
   const items = [
     ['personaje', `${S.nombre_sujeto} · ${S.genero}`],
     ...(avatarDesc ? [['apariencia', avatarDesc.substring(0, 80) + (avatarDesc.length > 80 ? '…' : '')]] : []),
     ['formato', S.formato_video],
+    ['guion', scriptText ? scriptText.substring(0, 70) + (scriptText.length > 70 ? '…' : '') : '—'],
     ['localización', S.localizacion?.split(',')[0] || '—'],
     ['luz', S.hora_dia?.split(',')[0] || '—'],
     ['visual', S.tono_visual?.split(',')[0] || '—'],
-    ['cámara', isMultishot ? 'Multishot (3 shots)' : (S.camara?.split(',')[0] || '—')],
-    ['script', S.script_custom || S.template_script ? (S.script_custom || S.template_script).substring(0, 60) + '…' : '—'],
-    ['transición frames', S.usar_frame_fin ? 'Sí — controlada' + (isMultishot ? ' (requerido por multishot)' : '') : 'No — consistencia total'],
+    ['cámara', S.usar_multishot ? '🎬 Multishot (3 ángulos)' : (S.camara?.split(',')[0] || '—')],
     ['producto', PRODUCTO ? PRODUCTO.substring(0, 70) + (PRODUCTO.length > 70 ? '…' : '') : '⚠ Sin definir — ve a ⚙ Configuración']
   ];
   grid.innerHTML = items.map(([k,v]) => `
@@ -2538,8 +1957,7 @@ function validate() {
       return false;
     },
     2: () => {
-      S.usar_frame_fin = document.getElementById('frameFinToggle').classList.contains('active');
-      S.frame_fin_descripcion = document.getElementById('frame_fin_descripcion').value.trim();
+      S.script_custom = document.getElementById('script_custom')?.value.trim() || '';
       const ok = !!S.formato_video;
       document.getElementById('err2').classList.toggle('show', !ok);
       return ok;
@@ -2554,11 +1972,7 @@ function validate() {
       document.getElementById('err4').classList.toggle('show', !ok);
       return ok;
     },
-    5: () => {
-      S.script_custom = document.getElementById('script_custom').value.trim();
-      return true;
-    },
-    6: () => true
+    5: () => true
   };
   return (v[currentStep] || (() => true))();
 }
@@ -2569,8 +1983,12 @@ function showStep(n) {
   document.querySelector(`[data-step="${n}"]`).classList.add('active');
   currentStep = n;
   updateProgress();
-  if (n === 5 && S.formato_video) { currentTemplateIdx = 0; renderTemplates(S.formato_video); }
-  if (n === 6) buildSummary();
+  if (n === 2 && S.formato_video) {
+    document.getElementById('scriptBlock').style.display = 'block';
+    currentTemplateIdx = 0;
+    renderTemplates(S.formato_video);
+  }
+  if (n === 5) buildSummary();
 }
 
 function goNext() {
@@ -2586,9 +2004,6 @@ function goBack() {
 async function submitForm() {
   if (!validate()) return;
 
-  // Build avatar description from traits before sending
-  S.avatar_descripcion = buildAvatarDescription();
-
   const payload = {
     nombre_sujeto: S.nombre_sujeto,
     genero: S.genero,
@@ -2602,7 +2017,7 @@ async function submitForm() {
     template_script: S.template_script,
     script_tts_override: S.script_custom || S.template_script,
     usar_frame_fin: S.usar_frame_fin,
-    frame_fin_descripcion: S.frame_fin_descripcion,
+    frame_fin_descripcion: '',
     avatar_descripcion: S.avatar_descripcion
   };
 
