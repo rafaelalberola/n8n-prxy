@@ -35,6 +35,149 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── COVER SCREEN ── */
+#coverScreen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+  overflow-y: auto;
+}
+#coverScreen.hidden { display: none; }
+.cover-inner {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.cover-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+.cover-brand .logo-dot { width: 12px; height: 12px; }
+.cover-brand-text {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.cover-hero {
+  text-align: center;
+}
+.cover-title {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.cover-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+.cover-sub {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 440px;
+  margin: 0 auto;
+}
+.cover-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.cover-pillar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.cover-pillar-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.cover-pillar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.cover-pillar-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.cover-config {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cover-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.cover-field textarea,
+.cover-field input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border 0.15s;
+  resize: none;
+}
+.cover-field textarea { min-height: 64px; font-family: 'DM Mono', monospace; font-size: 13px; }
+.cover-field input { font-family: 'DM Mono', monospace; font-size: 12px; }
+.cover-field textarea:focus,
+.cover-field input:focus { border-color: var(--accent); }
+.cover-cta {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(255,107,53,0.25);
+}
+.cover-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255,107,53,0.32); }
+.cover-cta:active { transform: translateY(0); }
+@media (max-width: 480px) {
+  .cover-title { font-size: 30px; }
+  .cover-pillars { grid-template-columns: 1fr; }
+  .cover-pillar { flex-direction: row; text-align: left; }
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -1201,7 +1344,53 @@ textarea { min-height: 90px; }
 </head>
 <body>
 
-<div class="wrap">
+<!-- COVER SCREEN -->
+<div id="coverScreen">
+  <div class="cover-inner">
+    <div class="cover-brand">
+      <div class="logo-dot"></div>
+      <span class="cover-brand-text">AI Video Studio</span>
+    </div>
+
+    <div class="cover-hero">
+      <h1 class="cover-title">Vídeos UGC con IA en <em>5 minutos</em></h1>
+      <p class="cover-sub">Crea clips para redes sin grabar, sin actores y sin equipo. Tú diriges, la IA produce.</p>
+    </div>
+
+    <div class="cover-pillars">
+      <div class="cover-pillar">
+        <span class="cover-pillar-icon">🎭</span>
+        <span class="cover-pillar-title">Tu elenco</span>
+        <span class="cover-pillar-desc">Personajes IA reutilizables</span>
+      </div>
+      <div class="cover-pillar">
+        <span class="cover-pillar-icon">🎬</span>
+        <span class="cover-pillar-title">Tu guion</span>
+        <span class="cover-pillar-desc">Hooks, demos, CTAs listos</span>
+      </div>
+      <div class="cover-pillar">
+        <span class="cover-pillar-icon">📲</span>
+        <span class="cover-pillar-title">Tu vídeo</span>
+        <span class="cover-pillar-desc">Listo para publicar</span>
+      </div>
+    </div>
+
+    <div class="cover-config">
+      <div class="cover-field">
+        <label>¿Qué vendes?</label>
+        <textarea id="coverProducto" placeholder="Ej: Formación online para crear avatares IA y escalar contenido para marcas"></textarea>
+      </div>
+      <div class="cover-field">
+        <label>Webhook n8n</label>
+        <input type="text" id="coverWebhook" placeholder="https://n8n.prxy.studio/webhook/ai-video-pipeline" spellcheck="false">
+      </div>
+    </div>
+
+    <button class="cover-cta" onclick="startWizard()">Empezar a crear →</button>
+  </div>
+</div>
+
+<div class="wrap" style="display:none">
 
   <div class="header">
     <div class="logo-group">
@@ -1624,10 +1813,26 @@ function selectLibChar(idx) {
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
-  fetchCharLibrary();
+  // Pre-fill cover inputs from localStorage
+  const cp = document.getElementById('coverProducto');
+  const cw = document.getElementById('coverWebhook');
+  if (cp) cp.value = PRODUCTO || '';
+  if (cw) cw.value = N8N_WEBHOOK_URL || '';
   // Pre-populate sensible defaults to reduce friction
   setTimeout(applyDefaults, 0);
 });
+
+function startWizard() {
+  const prod = document.getElementById('coverProducto').value.trim();
+  const url = document.getElementById('coverWebhook').value.trim() || DEFAULT_WEBHOOK;
+  PRODUCTO = prod;
+  N8N_WEBHOOK_URL = url;
+  localStorage.setItem('producto', prod);
+  localStorage.setItem('n8n_webhook_url', url);
+  document.getElementById('coverScreen').classList.add('hidden');
+  document.querySelector('.wrap').style.display = 'block';
+  fetchCharLibrary();
+}
 
 function applyDefaults() {
   document.querySelector('#localizacion .opt')?.click();
