@@ -1717,9 +1717,9 @@ function initAvatar3D() {
   const h = canvas.clientHeight || 380;
 
   avScene = new THREE.Scene();
-  avCamera = new THREE.PerspectiveCamera(28, w / h, 0.1, 100);
-  avCamera.position.set(0, 1.55, 6.2);
-  avCamera.lookAt(0, 1.4, 0);
+  avCamera = new THREE.PerspectiveCamera(32, w / h, 0.1, 100);
+  avCamera.position.set(0, 1.6, 7.5);
+  avCamera.lookAt(0, 1.0, 0);
 
   avRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   avRenderer.setSize(w, h, false);
@@ -1792,108 +1792,144 @@ function buildHumanoid() {
   if (!avGroup) return;
   disposeChildren(avGroup);
 
+  // ─── Read traits ───
   const skinKey = avatarTraits.piel?.el?.dataset?.skin || '3';
   const skinHex = SKIN_COLORS[skinKey] || '#d4a574';
   const hairKey = avatarTraits.pelo_color?.el?.dataset?.hair || 'dbrown';
   const hairHex = HAIR_COLORS[hairKey] || '#3d2314';
   const eyeVal = avatarTraits.ojos?.value || 'brown eyes';
   const eyeHex = EYE_COLORS[eyeVal] || '#4a3728';
-
-  const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.65, metalness: 0 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.85, metalness: 0.02 });
-  const eyeMat = new THREE.MeshStandardMaterial({ color: eyeHex, roughness: 0.3 });
-  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfaf8f4, roughness: 0.3 });
-  const clothMat = new THREE.MeshStandardMaterial({ color: 0x1f1f1f, roughness: 0.95 });
-  const lipMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(skinHex).multiplyScalar(0.7), roughness: 0.6 });
-
-  const gender = S.genero;
+  const gender = S.genero || 'mujer';
   const cx = avatarTraits.complexion?.value || '';
+  const faceKey = avatarTraits.rostro?.el?.dataset?.face || 'oval';
 
-  // Body proportions
-  let shoulderW = gender === 'mujer' ? 0.48 : 0.58;
-  let waistW = gender === 'mujer' ? 0.32 : 0.42;
-  let hipW = gender === 'mujer' ? 0.5 : 0.44;
-  let chestDepth = gender === 'mujer' ? 0.85 : 1.0;
+  // ─── Materials ───
+  const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.7, metalness: 0 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.75, metalness: 0.05 });
+  const eyeMat = new THREE.MeshStandardMaterial({ color: eyeHex, roughness: 0.2, metalness: 0.1 });
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8f6f0, roughness: 0.25 });
+  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.2 });
+  // Cloth color picks based on gender
+  const shirtColor = gender === 'mujer' ? 0xc94d6c : 0x4a6fa8;
+  const pantsColor = 0x2a3142;
+  const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.85 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.9 });
+  const lipColor = new THREE.Color(skinHex).lerp(new THREE.Color(0xa83d4d), 0.55);
+  const lipMat = new THREE.MeshStandardMaterial({ color: lipColor, roughness: 0.5 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
 
-  if (cx.includes('slim')) { shoulderW *= 0.85; waistW *= 0.78; hipW *= 0.85; }
-  else if (cx.includes('athletic')) { shoulderW *= 1.12; waistW *= 0.88; hipW *= 0.95; chestDepth *= 1.05; }
-  else if (cx.includes('curvy')) { shoulderW *= 0.95; waistW *= 0.85; hipW *= 1.22; }
+  // ─── Body proportions (Sim-like) ───
+  // Female: narrower shoulders, wider hips, defined waist
+  // Male: wider shoulders, narrower hips, V-shape
+  let shoulderW = gender === 'mujer' ? 0.55 : 0.72;
+  let waistW = gender === 'mujer' ? 0.36 : 0.48;
+  let hipW = gender === 'mujer' ? 0.58 : 0.50;
+  let chestDepth = gender === 'mujer' ? 0.78 : 0.92;
+  let bustOut = gender === 'mujer' ? 0.10 : 0;
 
-  // Torso — lathe geometry from silhouette points
+  // Complexion modifiers
+  if (cx.includes('slim')) {
+    shoulderW *= 0.82; waistW *= 0.72; hipW *= 0.82; chestDepth *= 0.85;
+    bustOut *= 0.7;
+  } else if (cx.includes('athletic')) {
+    shoulderW *= 1.18; waistW *= 0.85; hipW *= 0.95; chestDepth *= 1.1;
+  } else if (cx.includes('curvy')) {
+    shoulderW *= 0.95; waistW *= 0.92; hipW *= 1.30; chestDepth *= 1.08;
+    bustOut *= 1.5;
+  }
+
+  // ─── Hips & pelvis (pants top) ───
+  const pelvisGeo = new THREE.SphereGeometry(1, 24, 18);
+  const pelvis = new THREE.Mesh(pelvisGeo, pantsMat);
+  pelvis.scale.set(hipW * 0.95, 0.32, chestDepth * 0.65);
+  pelvis.position.y = 0.92;
+  avGroup.add(pelvis);
+
+  // ─── Torso (shirt) — lathe geometry with realistic curves ───
   const torsoPoints = [
-    new THREE.Vector2(0.001, 0),
-    new THREE.Vector2(hipW, 0.05),
-    new THREE.Vector2(hipW * 0.95, 0.3),
-    new THREE.Vector2(waistW, 0.55),
-    new THREE.Vector2(waistW * 1.1, 0.75),
-    new THREE.Vector2(shoulderW * 0.9, 0.95),
-    new THREE.Vector2(shoulderW, 1.05),
-    new THREE.Vector2(shoulderW * 0.55, 1.18),
-    new THREE.Vector2(0.001, 1.22),
+    new THREE.Vector2(hipW * 0.95, 0),       // bottom (waistband)
+    new THREE.Vector2(waistW * 1.0, 0.18),   // waist narrow
+    new THREE.Vector2(waistW * 1.05, 0.32),  // upper waist
+    new THREE.Vector2(shoulderW * 0.78, 0.52), // ribcage
+    new THREE.Vector2(shoulderW * 0.92, 0.7),  // chest
+    new THREE.Vector2(shoulderW, 0.82),      // shoulders
+    new THREE.Vector2(shoulderW * 0.55, 0.92), // top of shoulders
+    new THREE.Vector2(0.001, 0.95)           // neck base
   ];
   const torsoGeo = new THREE.LatheGeometry(torsoPoints, 32);
   torsoGeo.scale(1, 1, chestDepth);
-  const torso = new THREE.Mesh(torsoGeo, clothMat);
-  torso.position.y = 0.7;
+  const torso = new THREE.Mesh(torsoGeo, shirtMat);
+  torso.position.y = 1.05;
   avGroup.add(torso);
 
-  // Neck
+  // ─── Bust (only female) ───
+  if (gender === 'mujer' && bustOut > 0.05) {
+    const bustGeo = new THREE.SphereGeometry(bustOut * 1.5, 16, 16);
+    const bustL = new THREE.Mesh(bustGeo, shirtMat);
+    bustL.position.set(-0.13, 1.62, chestDepth * 0.55);
+    bustL.scale.set(1, 0.85, 0.9);
+    avGroup.add(bustL);
+    const bustR = new THREE.Mesh(bustGeo, shirtMat);
+    bustR.position.set(0.13, 1.62, chestDepth * 0.55);
+    bustR.scale.set(1, 0.85, 0.9);
+    avGroup.add(bustR);
+  }
+
+  // ─── Neck ───
   const neck = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.11, 0.13, 0.18, 16),
+    new THREE.CylinderGeometry(0.10, 0.13, 0.18, 16),
     skinMat
   );
-  neck.position.y = 1.86;
+  neck.position.y = 2.05;
   avGroup.add(neck);
 
-  // Head shape based on rostro
-  const faceKey = avatarTraits.rostro?.el?.dataset?.face || 'oval';
-  let headW = 0.30, headH = 0.38, headD = 0.32;
-  if (faceKey === 'round')   { headW = 0.33; headH = 0.34; headD = 0.32; }
-  if (faceKey === 'oval')    { headW = 0.28; headH = 0.40; headD = 0.31; }
-  if (faceKey === 'angular') { headW = 0.27; headH = 0.40; headD = 0.30; }
-  if (faceKey === 'square')  { headW = 0.32; headH = 0.35; headD = 0.31; }
+  // ─── Head ───
+  let headW = 0.32, headH = 0.40, headD = 0.34;
+  if (faceKey === 'round')   { headW = 0.36; headH = 0.36; headD = 0.34; }
+  if (faceKey === 'oval')    { headW = 0.30; headH = 0.42; headD = 0.33; }
+  if (faceKey === 'angular') { headW = 0.28; headH = 0.42; headD = 0.32; }
+  if (faceKey === 'square')  { headW = 0.34; headH = 0.36; headD = 0.33; }
 
   const headGeo = new THREE.SphereGeometry(1, 48, 48);
-  // Slightly flatten back of head and elongate front (more humanoid)
   const pos = headGeo.attributes.position;
+  // Slight chin taper + flatten back
   for (let i = 0; i < pos.count; i++) {
-    const z = pos.getZ(i);
-    if (z < -0.3) pos.setZ(i, z * 0.85);
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (z < -0.3) pos.setZ(i, z * 0.88);
+    if (y < -0.3) {
+      // Taper toward chin
+      const taper = faceKey === 'angular' || faceKey === 'oval' ? 0.78 : 0.92;
+      pos.setX(i, x * taper);
+      pos.setZ(i, z * taper);
+    }
+    if (faceKey === 'square' && y < -0.2 && y > -0.7) {
+      pos.setX(i, x * 1.1);
+    }
   }
   pos.needsUpdate = true;
   headGeo.computeVertexNormals();
 
   const head = new THREE.Mesh(headGeo, skinMat);
   head.scale.set(headW, headH, headD);
-  head.position.y = 2.16;
+  head.position.y = 2.32;
   avGroup.add(head);
 
-  // Jaw shape adjustment for square face (extra block underneath)
-  if (faceKey === 'square' || faceKey === 'angular') {
-    const jaw = new THREE.Mesh(
-      new THREE.BoxGeometry(headW * 1.5, 0.08, headD * 1.6),
-      skinMat
-    );
-    jaw.position.set(0, 1.99, 0);
-    avGroup.add(jaw);
-  }
-
-  // Ears
-  const earGeo = new THREE.SphereGeometry(0.04, 12, 12);
+  // ─── Ears ───
+  const earGeo = new THREE.SphereGeometry(0.045, 14, 14);
   const earL = new THREE.Mesh(earGeo, skinMat);
-  earL.position.set(-headW - 0.005, 2.16, 0);
-  earL.scale.set(0.6, 1.4, 0.8);
+  earL.position.set(-headW * 0.97, 2.32, 0);
+  earL.scale.set(0.5, 1.5, 0.85);
   avGroup.add(earL);
   const earR = new THREE.Mesh(earGeo, skinMat);
-  earR.position.set(headW + 0.005, 2.16, 0);
-  earR.scale.set(0.6, 1.4, 0.8);
+  earR.position.set(headW * 0.97, 2.32, 0);
+  earR.scale.set(0.5, 1.5, 0.85);
   avGroup.add(earR);
 
-  // Eyes — whites
-  const eyeWhiteGeo = new THREE.SphereGeometry(0.038, 16, 16);
-  const eyeOffsetX = 0.085;
-  const eyeY = 2.18;
-  const eyeZ = headD * 0.93;
+  // ─── Eyes ───
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.045, 18, 18);
+  const eyeOffsetX = headW * 0.32;
+  const eyeY = 2.36;
+  const eyeZ = headD * 0.92;
 
   const eyeWL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
   eyeWL.position.set(-eyeOffsetX, eyeY, eyeZ);
@@ -1903,179 +1939,254 @@ function buildHumanoid() {
   avGroup.add(eyeWR);
 
   // Iris
-  const irisGeo = new THREE.SphereGeometry(0.022, 16, 16);
+  const irisGeo = new THREE.SphereGeometry(0.025, 16, 16);
   const irisL = new THREE.Mesh(irisGeo, eyeMat);
-  irisL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.022);
+  irisL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.025);
   avGroup.add(irisL);
   const irisR = new THREE.Mesh(irisGeo, eyeMat);
-  irisR.position.set(eyeOffsetX, eyeY, eyeZ + 0.022);
+  irisR.position.set(eyeOffsetX, eyeY, eyeZ + 0.025);
   avGroup.add(irisR);
 
   // Pupils
-  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-  const pupilGeo = new THREE.SphereGeometry(0.01, 12, 12);
+  const pupilGeo = new THREE.SphereGeometry(0.011, 12, 12);
   const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-  pupilL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.034);
+  pupilL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.038);
   avGroup.add(pupilL);
   const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-  pupilR.position.set(eyeOffsetX, eyeY, eyeZ + 0.034);
+  pupilR.position.set(eyeOffsetX, eyeY, eyeZ + 0.038);
   avGroup.add(pupilR);
 
-  // Nose
-  const nose = new THREE.Mesh(
-    new THREE.ConeGeometry(0.025, 0.09, 12),
-    skinMat
-  );
-  nose.position.set(0, 2.12, eyeZ + 0.01);
+  // Eyebrows
+  const browMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.85 });
+  const browGeo = new THREE.BoxGeometry(0.08, 0.012, 0.02);
+  const browL = new THREE.Mesh(browGeo, browMat);
+  browL.position.set(-eyeOffsetX, eyeY + 0.06, eyeZ + 0.005);
+  browL.rotation.z = 0.05;
+  avGroup.add(browL);
+  const browR = new THREE.Mesh(browGeo, browMat);
+  browR.position.set(eyeOffsetX, eyeY + 0.06, eyeZ + 0.005);
+  browR.rotation.z = -0.05;
+  avGroup.add(browR);
+
+  // ─── Nose ───
+  const noseGeo = new THREE.ConeGeometry(0.028, 0.1, 12);
+  const nose = new THREE.Mesh(noseGeo, skinMat);
+  nose.position.set(0, 2.27, eyeZ + 0.015);
   nose.rotation.x = Math.PI;
   avGroup.add(nose);
+  // Nose tip
+  const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 12), skinMat);
+  noseTip.position.set(0, 2.225, eyeZ + 0.04);
+  noseTip.scale.set(1, 0.8, 1);
+  avGroup.add(noseTip);
 
-  // Mouth
-  const mouth = new THREE.Mesh(
-    new THREE.BoxGeometry(0.07, 0.012, 0.015),
-    lipMat
-  );
-  mouth.position.set(0, 2.04, eyeZ);
-  avGroup.add(mouth);
+  // ─── Mouth (lips) ───
+  const lipGeo = new THREE.SphereGeometry(0.04, 16, 12);
+  const upperLip = new THREE.Mesh(lipGeo, lipMat);
+  upperLip.position.set(0, 2.16, eyeZ - 0.005);
+  upperLip.scale.set(1.4, 0.35, 0.5);
+  avGroup.add(upperLip);
+  const lowerLip = new THREE.Mesh(lipGeo, lipMat);
+  lowerLip.position.set(0, 2.13, eyeZ - 0.005);
+  lowerLip.scale.set(1.2, 0.4, 0.55);
+  avGroup.add(lowerLip);
 
-  // Hair
-  buildHair(headW, headH, headD, hairMat);
+  // ─── Hair ───
+  buildHair(headW, headH, headD, hairMat, hairHex);
 
-  // Arms (cylinders + rounded ends)
-  const armLength = 0.95;
-  const armGeo = new THREE.CylinderGeometry(0.075, 0.06, armLength, 12);
-  const armL = new THREE.Mesh(armGeo, clothMat);
-  armL.position.set(-(shoulderW + 0.06), 1.32, 0);
-  armL.rotation.z = 0.18;
-  avGroup.add(armL);
-  const armR = new THREE.Mesh(armGeo, clothMat);
-  armR.position.set(shoulderW + 0.06, 1.32, 0);
-  armR.rotation.z = -0.18;
-  avGroup.add(armR);
+  // ─── Arms ───
+  const upperArmLen = 0.55;
+  const upperArmGeo = new THREE.CylinderGeometry(0.085, 0.07, upperArmLen, 14);
+  const armOffset = shoulderW + 0.04;
+
+  const upperArmL = new THREE.Mesh(upperArmGeo, shirtMat);
+  upperArmL.position.set(-armOffset, 1.65, 0);
+  upperArmL.rotation.z = 0.15;
+  avGroup.add(upperArmL);
+  const upperArmR = new THREE.Mesh(upperArmGeo, shirtMat);
+  upperArmR.position.set(armOffset, 1.65, 0);
+  upperArmR.rotation.z = -0.15;
+  avGroup.add(upperArmR);
+
+  // Forearms (skin)
+  const forearmGeo = new THREE.CylinderGeometry(0.07, 0.055, 0.5, 14);
+  const forearmL = new THREE.Mesh(forearmGeo, skinMat);
+  forearmL.position.set(-armOffset - 0.08, 1.13, 0);
+  forearmL.rotation.z = 0.1;
+  avGroup.add(forearmL);
+  const forearmR = new THREE.Mesh(forearmGeo, skinMat);
+  forearmR.position.set(armOffset + 0.08, 1.13, 0);
+  forearmR.rotation.z = -0.1;
+  avGroup.add(forearmR);
 
   // Hands
-  const handGeo = new THREE.SphereGeometry(0.075, 12, 12);
+  const handGeo = new THREE.SphereGeometry(0.075, 14, 14);
   const handL = new THREE.Mesh(handGeo, skinMat);
-  handL.position.set(-(shoulderW + 0.21), 0.84, 0);
+  handL.position.set(-armOffset - 0.13, 0.85, 0);
+  handL.scale.set(1, 1.15, 0.6);
   avGroup.add(handL);
   const handR = new THREE.Mesh(handGeo, skinMat);
-  handR.position.set(shoulderW + 0.21, 0.84, 0);
+  handR.position.set(armOffset + 0.13, 0.85, 0);
+  handR.scale.set(1, 1.15, 0.6);
   avGroup.add(handR);
 
-  // Legs
-  const legGeo = new THREE.CylinderGeometry(0.13, 0.1, 1.05, 14);
-  const legL = new THREE.Mesh(legGeo, clothMat);
-  legL.position.set(-0.18, 0.18, 0);
-  avGroup.add(legL);
-  const legR = new THREE.Mesh(legGeo, clothMat);
-  legR.position.set(0.18, 0.18, 0);
-  avGroup.add(legR);
+  // ─── Legs ───
+  const thighGeo = new THREE.CylinderGeometry(0.15, 0.12, 0.6, 14);
+  const thighL = new THREE.Mesh(thighGeo, pantsMat);
+  thighL.position.set(-0.18, 0.5, 0);
+  avGroup.add(thighL);
+  const thighR = new THREE.Mesh(thighGeo, pantsMat);
+  thighR.position.set(0.18, 0.5, 0);
+  avGroup.add(thighR);
+
+  // Calves
+  const calfGeo = new THREE.CylinderGeometry(0.11, 0.08, 0.55, 14);
+  const calfL = new THREE.Mesh(calfGeo, pantsMat);
+  calfL.position.set(-0.18, -0.07, 0);
+  avGroup.add(calfL);
+  const calfR = new THREE.Mesh(calfGeo, pantsMat);
+  calfR.position.set(0.18, -0.07, 0);
+  avGroup.add(calfR);
 
   // Feet
-  const footGeo = new THREE.BoxGeometry(0.16, 0.06, 0.25);
-  const footL = new THREE.Mesh(footGeo, clothMat);
-  footL.position.set(-0.18, -0.36, 0.04);
+  const footGeo = new THREE.BoxGeometry(0.18, 0.07, 0.32);
+  const footL = new THREE.Mesh(footGeo, shoeMat);
+  footL.position.set(-0.18, -0.4, 0.06);
   avGroup.add(footL);
-  const footR = new THREE.Mesh(footGeo, clothMat);
-  footR.position.set(0.18, -0.36, 0.04);
+  const footR = new THREE.Mesh(footGeo, shoeMat);
+  footR.position.set(0.18, -0.4, 0.06);
   avGroup.add(footR);
 
-  // Center & lift the whole thing slightly
-  avGroup.position.y = -0.5;
+  // Center the whole thing
+  avGroup.position.y = -0.6;
 }
 
-function buildHair(headW, headH, headD, hairMat) {
+function buildHair(headW, headH, headD, hairMat, hairHex) {
   const tipo = avatarTraits.pelo_tipo?.value || '';
   const largo = avatarTraits.pelo_largo?.value || 'short';
+  const headY = 2.32;
 
+  // BUZZCUT — tight cap, head color visible underneath
   if (tipo.includes('buzzcut')) {
-    // Tight skull cap
-    const capGeo = new THREE.SphereGeometry(1, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const capGeo = new THREE.SphereGeometry(1, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5);
     const cap = new THREE.Mesh(capGeo, hairMat);
-    cap.scale.set(headW * 1.04, headH * 1.04, headD * 1.04);
-    cap.position.y = 2.16;
+    cap.scale.set(headW * 1.05, headH * 1.0, headD * 1.05);
+    cap.position.y = headY + 0.02;
     avGroup.add(cap);
     return;
   }
 
+  // AFRO — big poofy sphere with noise
   if (tipo.includes('afro')) {
-    // Big poofy sphere
-    const afroGeo = new THREE.SphereGeometry(1, 32, 32);
+    const afroGeo = new THREE.SphereGeometry(1, 36, 36);
     const afroPos = afroGeo.attributes.position;
-    // Add noise to make it look fluffy
     for (let i = 0; i < afroPos.count; i++) {
-      const x = afroPos.getX(i);
-      const y = afroPos.getY(i);
-      const z = afroPos.getZ(i);
-      const n = (Math.sin(x * 8) + Math.cos(y * 8) + Math.sin(z * 8)) * 0.04;
-      afroPos.setX(i, x + n);
-      afroPos.setZ(i, z + n);
+      const x = afroPos.getX(i), y = afroPos.getY(i), z = afroPos.getZ(i);
+      if (y > -0.2) {
+        const n = (Math.sin(x * 10) + Math.cos(y * 10) + Math.sin(z * 10)) * 0.06;
+        afroPos.setX(i, x + n);
+        afroPos.setY(i, y + n * 0.5);
+        afroPos.setZ(i, z + n);
+      }
     }
     afroPos.needsUpdate = true;
     afroGeo.computeVertexNormals();
     const afro = new THREE.Mesh(afroGeo, hairMat);
-    afro.scale.set(headW * 1.7, headH * 1.45, headD * 1.7);
-    afro.position.y = 2.22;
+    afro.scale.set(headW * 1.85, headH * 1.55, headD * 1.85);
+    afro.position.y = headY + 0.12;
     avGroup.add(afro);
     return;
   }
 
-  // Top cap (covers top + sides + back of head)
+  // STRAIGHT / WAVY / CURLY hair
   const isCurly = tipo.includes('curly') || tipo.includes('coily');
-  const capGeo = new THREE.SphereGeometry(1, 48, 48, 0, Math.PI * 2, 0, Math.PI * 0.65);
+  const isWavy = tipo.includes('wavy');
+
+  // Top cap covering skull
+  const capGeo = new THREE.SphereGeometry(1, 48, 48, 0, Math.PI * 2, 0, Math.PI * 0.62);
   if (isCurly) {
     const p = capGeo.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const n = (Math.sin(x * 12) + Math.cos(z * 12)) * 0.03;
+      const n = (Math.sin(x * 14) + Math.cos(z * 14) + Math.sin(y * 10)) * 0.04;
       p.setX(i, x + n);
+      p.setY(i, y + n * 0.3);
       p.setZ(i, z + n);
+    }
+    p.needsUpdate = true;
+    capGeo.computeVertexNormals();
+  } else if (isWavy) {
+    const p = capGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      const n = Math.sin(x * 6 + z * 4) * 0.02;
+      p.setY(i, p.getY(i) + n);
     }
     p.needsUpdate = true;
     capGeo.computeVertexNormals();
   }
   const cap = new THREE.Mesh(capGeo, hairMat);
-  cap.scale.set(headW * 1.08, headH * 1.12, headD * 1.1);
-  cap.position.y = 2.18;
+  cap.scale.set(headW * 1.1, headH * 1.18, headD * 1.12);
+  cap.position.y = headY + 0.04;
   avGroup.add(cap);
+
+  // Side hair (covers sides of head down to ears)
+  const sideGeo = new THREE.SphereGeometry(1, 20, 20, 0, Math.PI * 2, 0, Math.PI);
+  const sideHair = new THREE.Mesh(sideGeo, hairMat);
+  sideHair.scale.set(headW * 1.12, headH * 0.55, headD * 1.0);
+  sideHair.position.y = headY + 0.05;
+  avGroup.add(sideHair);
 
   const isLong = largo.includes('long') || largo.includes('past');
   const isMedium = largo.includes('medium');
 
   if (isLong || isMedium) {
-    // Hair falling behind shoulders
-    const length = isLong ? 1.0 : 0.55;
-    const baseR = headW * 1.05;
-    const tipR = isCurly ? baseR * 1.15 : baseR * 0.95;
-    const hairBackGeo = new THREE.CylinderGeometry(baseR, tipR, length, 20, 1, true);
-    if (isCurly) {
-      const p = hairBackGeo.attributes.position;
+    // Hair falling down behind/around head
+    const length = isLong ? 1.15 : 0.55;
+    const baseR = headW * 1.18;
+    const tipR = isCurly ? baseR * 1.2 : baseR * 0.92;
+
+    // Create using lathe for nice falling shape
+    const hairFallPoints = [];
+    const segments = 12;
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const r = baseR + (tipR - baseR) * t;
+      const y = -t * length;
+      hairFallPoints.push(new THREE.Vector2(r, y));
+    }
+    const fallGeo = new THREE.LatheGeometry(hairFallPoints, 24);
+    fallGeo.scale(1, 1, 0.85);
+
+    if (isCurly || isWavy) {
+      const p = fallGeo.attributes.position;
       for (let i = 0; i < p.count; i++) {
-        const x = p.getX(i), z = p.getZ(i);
-        const n = (Math.sin(p.getY(i) * 8 + x * 4) + Math.cos(z * 6)) * 0.025;
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        const freq = isCurly ? 14 : 6;
+        const amp = isCurly ? 0.04 : 0.02;
+        const n = (Math.sin(y * freq + x * 3) + Math.cos(z * freq)) * amp;
         p.setX(i, x + n);
         p.setZ(i, z + n);
       }
       p.needsUpdate = true;
-      hairBackGeo.computeVertexNormals();
+      fallGeo.computeVertexNormals();
     }
-    const hairBackMat = new THREE.MeshStandardMaterial({
-      color: hairMat.color, roughness: 0.85, side: THREE.DoubleSide
+
+    const hairFallMat = new THREE.MeshStandardMaterial({
+      color: hairHex, roughness: 0.78, side: THREE.DoubleSide, metalness: 0.05
     });
-    const hairBack = new THREE.Mesh(hairBackGeo, hairBackMat);
-    hairBack.position.set(0, 2.16 - length / 2, -0.04);
-    hairBack.scale.set(1, 1, 0.7);
-    avGroup.add(hairBack);
+    const fall = new THREE.Mesh(fallGeo, hairFallMat);
+    fall.position.set(0, headY + 0.05, -0.02);
+    avGroup.add(fall);
   }
 
-  // Front bangs / fringe for non-buzzcut
-  if (!tipo.includes('buzzcut')) {
-    const bangsGeo = new THREE.SphereGeometry(1, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.35);
-    const bangs = new THREE.Mesh(bangsGeo, hairMat);
-    bangs.scale.set(headW * 1.05, headH * 0.5, headD * 1.05);
-    bangs.position.set(0, 2.31, headD * 0.15);
-    avGroup.add(bangs);
-  }
+  // Front fringe / bangs
+  const bangsGeo = new THREE.SphereGeometry(1, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.4);
+  const bangs = new THREE.Mesh(bangsGeo, hairMat);
+  bangs.scale.set(headW * 1.08, headH * 0.45, headD * 1.08);
+  bangs.position.set(0, headY + 0.18, headD * 0.18);
+  bangs.rotation.x = -0.15;
+  avGroup.add(bangs);
 }
 
 function updateAvatar3D() {
