@@ -6,6 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>AI Video Studio v2</title>
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff6b35'/></svg>">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap');
@@ -1023,26 +1024,19 @@ textarea { min-height: 90px; }
 
 /* 3D scene container */
 .av-scene {
-  perspective: 800px;
-  width: 240px;
-  height: 340px;
+  width: 280px;
+  height: 380px;
   position: relative;
   z-index: 1;
 }
 
-.av-figure {
+#av3dCanvas {
   width: 100%;
   height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.05s linear;
+  display: block;
+  cursor: grab;
 }
-
-.av-figure svg {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
-}
-.av-figure svg * { transition: fill 0.35s ease, d 0.35s ease, opacity 0.35s ease; }
+#av3dCanvas:active { cursor: grabbing; }
 
 .av-info {
   position: relative;
@@ -1126,9 +1120,9 @@ textarea { min-height: 90px; }
 .multishot-hint.show { display: block; }
 
 @media (max-width: 768px) {
-  .creator-panel { grid-template-columns: 1fr; grid-template-rows: 280px 1fr; }
-  .creator-right { min-height: 280px; }
-  .av-scene { width: 160px; height: 220px; }
+  .creator-panel { grid-template-columns: 1fr; grid-template-rows: 320px 1fr; }
+  .creator-right { min-height: 320px; }
+  .av-scene { width: 220px; height: 300px; }
   .av-prompt-box { display: none; }
 }
 
@@ -1481,29 +1475,7 @@ textarea { min-height: 90px; }
       <div class="av-drag-hint">ARRASTRA PARA GIRAR</div>
       <div class="av-platform"></div>
       <div class="av-scene">
-        <div class="av-figure" id="avFigure">
-          <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-            <ellipse id="av-hair-back" cx="100" cy="120" rx="0" ry="0" fill="#333" opacity="0"/>
-            <path id="av-body" d="M60,155 Q60,140 75,135 L125,135 Q140,140 140,155 L145,240 Q145,255 130,255 L70,255 Q55,255 55,240 Z" fill="#444"/>
-            <rect id="av-neck" x="88" y="105" width="24" height="25" rx="4" fill="#666"/>
-            <ellipse id="av-head" cx="100" cy="80" rx="42" ry="50" fill="#666"/>
-            <ellipse cx="57" cy="82" rx="6" ry="10" id="av-ear-l" fill="#666"/>
-            <ellipse cx="143" cy="82" rx="6" ry="10" id="av-ear-r" fill="#666"/>
-            <path id="av-hair" d="M58,75 Q58,30 100,28 Q142,30 142,75 Q130,50 100,48 Q70,50 58,75 Z" fill="#333"/>
-            <g id="av-eyes">
-              <ellipse cx="82" cy="76" rx="6" ry="5" fill="#fff"/>
-              <ellipse cx="118" cy="76" rx="6" ry="5" fill="#fff"/>
-              <circle id="av-eye-l" cx="83" cy="77" r="3" fill="#4a3728"/>
-              <circle id="av-eye-r" cx="119" cy="77" r="3" fill="#4a3728"/>
-            </g>
-            <path id="av-nose" d="M97,85 Q100,92 103,85" fill="none" stroke="#00000020" stroke-width="1.5" stroke-linecap="round"/>
-            <path id="av-mouth" d="M88,97 Q100,105 112,97" fill="none" stroke="#00000025" stroke-width="2" stroke-linecap="round"/>
-            <path id="av-arm-l" d="M60,150 Q40,170 38,210 Q36,220 42,220 Q48,220 48,215 Q50,185 65,165" fill="#444"/>
-            <path id="av-arm-r" d="M140,150 Q160,170 162,210 Q164,220 158,220 Q152,220 152,215 Q150,185 135,165" fill="#444"/>
-            <circle id="av-hand-l" cx="40" cy="222" r="8" fill="#666"/>
-            <circle id="av-hand-r" cx="160" cy="222" r="8" fill="#666"/>
-          </svg>
-        </div>
+        <canvas id="av3dCanvas"></canvas>
       </div>
       <div class="av-info">
         <div class="av-name" id="avatarNameDisplay"></div>
@@ -1685,8 +1657,12 @@ function buildAvatarDescription() {
 function openCreator() {
   document.getElementById('creatorModal').classList.add('open');
   document.body.style.overflow = 'hidden';
-  initDragRotation();
-  updateAvatarPreview();
+  // Wait for modal to be visible so canvas has dimensions
+  requestAnimationFrame(() => {
+    initAvatar3D();
+    initDragRotation();
+    updateAvatarPreview();
+  });
 }
 
 function closeCreator() {
@@ -1723,186 +1699,423 @@ function confirmCreator() {
   document.getElementById('err1b').classList.remove('show');
 }
 
-// ── 3D ROTATION (drag to rotate) ────────────────────────
-let avRotation = 0;
-let avDragging = false;
-let avStartX = 0;
-let avStartRotation = 0;
-
-function initDragRotation() {
-  const area = document.getElementById('creatorPreviewArea');
-  if (!area || area._dragInit) return;
-  area._dragInit = true;
-
-  // Mouse
-  area.addEventListener('mousedown', (e) => {
-    avDragging = true;
-    avStartX = e.clientX;
-    avStartRotation = avRotation;
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!avDragging) return;
-    const dx = e.clientX - avStartX;
-    avRotation = avStartRotation + dx * 0.5;
-    applyRotation();
-  });
-  window.addEventListener('mouseup', () => { avDragging = false; });
-
-  // Touch
-  area.addEventListener('touchstart', (e) => {
-    avDragging = true;
-    avStartX = e.touches[0].clientX;
-    avStartRotation = avRotation;
-  }, { passive: true });
-  window.addEventListener('touchmove', (e) => {
-    if (!avDragging) return;
-    const dx = e.touches[0].clientX - avStartX;
-    avRotation = avStartRotation + dx * 0.5;
-    applyRotation();
-  }, { passive: true });
-  window.addEventListener('touchend', () => { avDragging = false; });
-}
-
-function applyRotation() {
-  const fig = document.getElementById('avFigure');
-  if (!fig) return;
-  fig.style.transform = `rotateY(${avRotation}deg)`;
-
-  // Fade face features when showing side/back
-  const norm = ((avRotation % 360) + 360) % 360;
-  const isSide = (norm > 60 && norm < 120) || (norm > 240 && norm < 300);
-  const isBack = norm > 120 && norm < 240;
-  const eyes = document.getElementById('av-eyes');
-  const nose = document.getElementById('av-nose');
-  const mouth = document.getElementById('av-mouth');
-  if (eyes) eyes.style.opacity = isBack ? '0' : isSide ? '0.3' : '1';
-  if (nose) nose.style.opacity = isBack ? '0' : isSide ? '0.3' : '1';
-  if (mouth) mouth.style.opacity = isBack ? '0' : isSide ? '0.3' : '1';
-}
-
-// ── SVG AVATAR CONFIG ────────────────────────────────────
+// ── THREE.JS 3D AVATAR ───────────────────────────────────
 const SKIN_COLORS = { '1': '#fde7d6', '2': '#f5d0b0', '3': '#d4a574', '4': '#a67c52', '5': '#6b4423' };
 const HAIR_COLORS = { 'black': '#1a1a1a', 'dbrown': '#3d2314', 'lbrown': '#8b6842', 'blonde': '#d4a853', 'red': '#a0522d', 'platinum': '#e0d8c8' };
 const EYE_COLORS = { 'brown eyes': '#4a3728', 'dark brown, almost black eyes': '#1a1208', 'green eyes': '#2d6b3f', 'blue eyes': '#3a6fa8', 'hazel, amber eyes': '#8b6914' };
 
-// Head shapes by face type
-const FACE_SHAPES = {
-  round:   { rx: 44, ry: 48 },
-  oval:    { rx: 40, ry: 52 },
-  angular: { rx: 38, ry: 50 },
-  square:  { rx: 42, ry: 46 }
-};
+let avRenderer, avScene, avCamera, avGroup;
+let avInited = false;
 
-// Hair paths
-const HAIR_PATHS = {
-  short:           () => 'M58,70 Q58,28 100,25 Q142,28 142,70 Q135,45 100,42 Q65,45 58,70 Z',
-  medium_straight: () => 'M55,70 Q55,25 100,22 Q145,25 145,70 Q145,100 140,115 L138,115 Q142,95 142,70 Q135,42 100,40 Q65,42 58,70 Q58,95 62,115 L60,115 Q55,100 55,70 Z',
-  long_straight:   () => 'M55,70 Q55,25 100,22 Q145,25 145,70 Q148,120 145,170 L140,170 Q142,120 142,70 Q135,42 100,40 Q65,42 58,70 Q58,120 60,170 L55,170 Q52,120 55,70 Z',
-  medium_wavy:     () => 'M55,70 Q55,25 100,22 Q145,25 145,70 Q147,85 143,100 Q140,110 142,115 L138,115 Q140,105 138,95 Q142,80 142,70 Q135,42 100,40 Q65,42 58,70 Q58,80 62,95 Q64,105 62,115 L58,115 Q60,110 57,100 Q53,85 55,70 Z',
-  long_wavy:       () => 'M55,70 Q55,25 100,22 Q145,25 145,70 Q148,95 143,120 Q140,140 144,165 L140,165 Q137,140 140,120 Q144,95 142,70 Q135,42 100,40 Q65,42 58,70 Q56,95 60,120 Q63,140 60,165 L56,165 Q59,140 57,120 Q52,95 55,70 Z',
-  medium_curly:    () => 'M53,70 Q53,22 100,18 Q147,22 147,70 Q150,90 145,110 Q142,118 146,125 Q140,122 143,112 Q148,90 146,72 Q140,38 100,36 Q60,38 54,72 Q52,90 57,112 Q60,122 54,125 Q58,118 55,110 Q50,90 53,70 Z',
-  long_curly:      () => 'M50,70 Q50,18 100,15 Q150,18 150,70 Q154,100 148,130 Q144,150 150,170 Q143,167 146,148 Q152,125 150,95 Q148,65 146,70 Q140,36 100,33 Q60,36 54,70 Q52,65 52,95 Q48,125 54,148 Q57,167 50,170 Q56,150 52,130 Q46,100 50,70 Z',
-  afro:            () => 'M40,85 Q35,40 65,18 Q85,8 100,8 Q115,8 135,18 Q165,40 160,85 Q162,110 155,120 Q150,100 152,85 Q155,50 135,32 Q118,18 100,18 Q82,18 65,32 Q45,50 48,85 Q50,100 45,120 Q38,110 40,85 Z',
-  buzzcut:         () => 'M60,74 Q60,34 100,30 Q140,34 140,74 Q135,52 100,48 Q65,52 60,74 Z'
-};
+function initAvatar3D() {
+  if (avInited) { handleResize(); return; }
+  const canvas = document.getElementById('av3dCanvas');
+  if (!canvas || typeof THREE === 'undefined') return;
+  avInited = true;
 
-function getHairType() {
-  const tipo = avatarTraits.pelo_tipo?.value || '';
-  const largo = avatarTraits.pelo_largo?.value || 'short';
-  if (tipo.includes('buzzcut')) return 'buzzcut';
-  if (tipo.includes('afro')) return 'afro';
-  const isLong = largo.includes('long') || largo.includes('past');
-  const isMedium = largo.includes('medium');
-  if (tipo.includes('curly') || tipo.includes('coily')) return isLong ? 'long_curly' : isMedium ? 'medium_curly' : 'short';
-  if (tipo.includes('wavy')) return isLong ? 'long_wavy' : isMedium ? 'medium_wavy' : 'short';
-  return isLong ? 'long_straight' : isMedium ? 'medium_straight' : 'short';
+  const w = canvas.clientWidth || 280;
+  const h = canvas.clientHeight || 380;
+
+  avScene = new THREE.Scene();
+  avCamera = new THREE.PerspectiveCamera(28, w / h, 0.1, 100);
+  avCamera.position.set(0, 1.55, 6.2);
+  avCamera.lookAt(0, 1.4, 0);
+
+  avRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  avRenderer.setSize(w, h, false);
+  avRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  avRenderer.shadowMap.enabled = false;
+
+  // Lighting — three-point setup for cinematic look
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  avScene.add(ambient);
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.1);
+  key.position.set(3, 5, 4);
+  avScene.add(key);
+
+  const fill = new THREE.DirectionalLight(0x88aaff, 0.35);
+  fill.position.set(-4, 2, 3);
+  avScene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0xff6b35, 0.7);
+  rim.position.set(0, 3, -5);
+  avScene.add(rim);
+
+  // Ground glow
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(1.2, 32),
+    new THREE.MeshBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0.08 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.95;
+  avScene.add(ground);
+
+  avGroup = new THREE.Group();
+  avScene.add(avGroup);
+
+  buildHumanoid();
+
+  function animate() {
+    if (!avInited) return;
+    requestAnimationFrame(animate);
+    avRenderer.render(avScene, avCamera);
+  }
+  animate();
+
+  window.addEventListener('resize', handleResize);
 }
 
-// Body paths by gender + complexion
-function getBodyPath() {
+function handleResize() {
+  const canvas = document.getElementById('av3dCanvas');
+  if (!canvas || !avRenderer || !avCamera) return;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  avCamera.aspect = w / h;
+  avCamera.updateProjectionMatrix();
+  avRenderer.setSize(w, h, false);
+}
+
+function disposeChildren(group) {
+  while (group.children.length) {
+    const c = group.children[0];
+    group.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) {
+      if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+      else c.material.dispose();
+    }
+  }
+}
+
+function buildHumanoid() {
+  if (!avGroup) return;
+  disposeChildren(avGroup);
+
+  const skinKey = avatarTraits.piel?.el?.dataset?.skin || '3';
+  const skinHex = SKIN_COLORS[skinKey] || '#d4a574';
+  const hairKey = avatarTraits.pelo_color?.el?.dataset?.hair || 'dbrown';
+  const hairHex = HAIR_COLORS[hairKey] || '#3d2314';
+  const eyeVal = avatarTraits.ojos?.value || 'brown eyes';
+  const eyeHex = EYE_COLORS[eyeVal] || '#4a3728';
+
+  const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.65, metalness: 0 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.85, metalness: 0.02 });
+  const eyeMat = new THREE.MeshStandardMaterial({ color: eyeHex, roughness: 0.3 });
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfaf8f4, roughness: 0.3 });
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0x1f1f1f, roughness: 0.95 });
+  const lipMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(skinHex).multiplyScalar(0.7), roughness: 0.6 });
+
+  const gender = S.genero;
   const cx = avatarTraits.complexion?.value || '';
-  const g = S.genero;
-  if (cx.includes('slim')) {
-    return g === 'mujer'
-      ? 'M68,155 Q68,142 80,137 L120,137 Q132,142 132,155 L136,240 Q136,255 124,255 L76,255 Q64,255 64,240 Z'
-      : 'M66,155 Q66,142 78,137 L122,137 Q134,142 134,155 L137,240 Q137,255 125,255 L75,255 Q63,255 63,240 Z';
+
+  // Body proportions
+  let shoulderW = gender === 'mujer' ? 0.48 : 0.58;
+  let waistW = gender === 'mujer' ? 0.32 : 0.42;
+  let hipW = gender === 'mujer' ? 0.5 : 0.44;
+  let chestDepth = gender === 'mujer' ? 0.85 : 1.0;
+
+  if (cx.includes('slim')) { shoulderW *= 0.85; waistW *= 0.78; hipW *= 0.85; }
+  else if (cx.includes('athletic')) { shoulderW *= 1.12; waistW *= 0.88; hipW *= 0.95; chestDepth *= 1.05; }
+  else if (cx.includes('curvy')) { shoulderW *= 0.95; waistW *= 0.85; hipW *= 1.22; }
+
+  // Torso — lathe geometry from silhouette points
+  const torsoPoints = [
+    new THREE.Vector2(0.001, 0),
+    new THREE.Vector2(hipW, 0.05),
+    new THREE.Vector2(hipW * 0.95, 0.3),
+    new THREE.Vector2(waistW, 0.55),
+    new THREE.Vector2(waistW * 1.1, 0.75),
+    new THREE.Vector2(shoulderW * 0.9, 0.95),
+    new THREE.Vector2(shoulderW, 1.05),
+    new THREE.Vector2(shoulderW * 0.55, 1.18),
+    new THREE.Vector2(0.001, 1.22),
+  ];
+  const torsoGeo = new THREE.LatheGeometry(torsoPoints, 32);
+  torsoGeo.scale(1, 1, chestDepth);
+  const torso = new THREE.Mesh(torsoGeo, clothMat);
+  torso.position.y = 0.7;
+  avGroup.add(torso);
+
+  // Neck
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.13, 0.18, 16),
+    skinMat
+  );
+  neck.position.y = 1.86;
+  avGroup.add(neck);
+
+  // Head shape based on rostro
+  const faceKey = avatarTraits.rostro?.el?.dataset?.face || 'oval';
+  let headW = 0.30, headH = 0.38, headD = 0.32;
+  if (faceKey === 'round')   { headW = 0.33; headH = 0.34; headD = 0.32; }
+  if (faceKey === 'oval')    { headW = 0.28; headH = 0.40; headD = 0.31; }
+  if (faceKey === 'angular') { headW = 0.27; headH = 0.40; headD = 0.30; }
+  if (faceKey === 'square')  { headW = 0.32; headH = 0.35; headD = 0.31; }
+
+  const headGeo = new THREE.SphereGeometry(1, 48, 48);
+  // Slightly flatten back of head and elongate front (more humanoid)
+  const pos = headGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i);
+    if (z < -0.3) pos.setZ(i, z * 0.85);
   }
-  if (cx.includes('athletic')) {
-    return g === 'mujer'
-      ? 'M58,155 Q58,138 74,133 L126,133 Q142,138 142,155 L144,240 Q144,255 130,255 L70,255 Q56,255 56,240 Z'
-      : 'M55,155 Q55,136 73,131 L127,131 Q145,136 145,155 L148,240 Q148,255 133,255 L67,255 Q52,255 52,240 Z';
+  pos.needsUpdate = true;
+  headGeo.computeVertexNormals();
+
+  const head = new THREE.Mesh(headGeo, skinMat);
+  head.scale.set(headW, headH, headD);
+  head.position.y = 2.16;
+  avGroup.add(head);
+
+  // Jaw shape adjustment for square face (extra block underneath)
+  if (faceKey === 'square' || faceKey === 'angular') {
+    const jaw = new THREE.Mesh(
+      new THREE.BoxGeometry(headW * 1.5, 0.08, headD * 1.6),
+      skinMat
+    );
+    jaw.position.set(0, 1.99, 0);
+    avGroup.add(jaw);
   }
-  if (cx.includes('curvy')) {
-    return g === 'mujer'
-      ? 'M54,155 Q54,138 70,133 L130,133 Q146,138 146,155 L152,210 Q154,230 150,240 Q148,257 133,257 L67,257 Q52,257 50,240 Q46,230 48,210 Z'
-      : 'M55,155 Q55,138 72,133 L128,133 Q145,138 145,155 L150,240 Q150,257 133,257 L67,257 Q50,257 50,240 Z';
+
+  // Ears
+  const earGeo = new THREE.SphereGeometry(0.04, 12, 12);
+  const earL = new THREE.Mesh(earGeo, skinMat);
+  earL.position.set(-headW - 0.005, 2.16, 0);
+  earL.scale.set(0.6, 1.4, 0.8);
+  avGroup.add(earL);
+  const earR = new THREE.Mesh(earGeo, skinMat);
+  earR.position.set(headW + 0.005, 2.16, 0);
+  earR.scale.set(0.6, 1.4, 0.8);
+  avGroup.add(earR);
+
+  // Eyes — whites
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.038, 16, 16);
+  const eyeOffsetX = 0.085;
+  const eyeY = 2.18;
+  const eyeZ = headD * 0.93;
+
+  const eyeWL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+  eyeWL.position.set(-eyeOffsetX, eyeY, eyeZ);
+  avGroup.add(eyeWL);
+  const eyeWR = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+  eyeWR.position.set(eyeOffsetX, eyeY, eyeZ);
+  avGroup.add(eyeWR);
+
+  // Iris
+  const irisGeo = new THREE.SphereGeometry(0.022, 16, 16);
+  const irisL = new THREE.Mesh(irisGeo, eyeMat);
+  irisL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.022);
+  avGroup.add(irisL);
+  const irisR = new THREE.Mesh(irisGeo, eyeMat);
+  irisR.position.set(eyeOffsetX, eyeY, eyeZ + 0.022);
+  avGroup.add(irisR);
+
+  // Pupils
+  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+  const pupilGeo = new THREE.SphereGeometry(0.01, 12, 12);
+  const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
+  pupilL.position.set(-eyeOffsetX, eyeY, eyeZ + 0.034);
+  avGroup.add(pupilL);
+  const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
+  pupilR.position.set(eyeOffsetX, eyeY, eyeZ + 0.034);
+  avGroup.add(pupilR);
+
+  // Nose
+  const nose = new THREE.Mesh(
+    new THREE.ConeGeometry(0.025, 0.09, 12),
+    skinMat
+  );
+  nose.position.set(0, 2.12, eyeZ + 0.01);
+  nose.rotation.x = Math.PI;
+  avGroup.add(nose);
+
+  // Mouth
+  const mouth = new THREE.Mesh(
+    new THREE.BoxGeometry(0.07, 0.012, 0.015),
+    lipMat
+  );
+  mouth.position.set(0, 2.04, eyeZ);
+  avGroup.add(mouth);
+
+  // Hair
+  buildHair(headW, headH, headD, hairMat);
+
+  // Arms (cylinders + rounded ends)
+  const armLength = 0.95;
+  const armGeo = new THREE.CylinderGeometry(0.075, 0.06, armLength, 12);
+  const armL = new THREE.Mesh(armGeo, clothMat);
+  armL.position.set(-(shoulderW + 0.06), 1.32, 0);
+  armL.rotation.z = 0.18;
+  avGroup.add(armL);
+  const armR = new THREE.Mesh(armGeo, clothMat);
+  armR.position.set(shoulderW + 0.06, 1.32, 0);
+  armR.rotation.z = -0.18;
+  avGroup.add(armR);
+
+  // Hands
+  const handGeo = new THREE.SphereGeometry(0.075, 12, 12);
+  const handL = new THREE.Mesh(handGeo, skinMat);
+  handL.position.set(-(shoulderW + 0.21), 0.84, 0);
+  avGroup.add(handL);
+  const handR = new THREE.Mesh(handGeo, skinMat);
+  handR.position.set(shoulderW + 0.21, 0.84, 0);
+  avGroup.add(handR);
+
+  // Legs
+  const legGeo = new THREE.CylinderGeometry(0.13, 0.1, 1.05, 14);
+  const legL = new THREE.Mesh(legGeo, clothMat);
+  legL.position.set(-0.18, 0.18, 0);
+  avGroup.add(legL);
+  const legR = new THREE.Mesh(legGeo, clothMat);
+  legR.position.set(0.18, 0.18, 0);
+  avGroup.add(legR);
+
+  // Feet
+  const footGeo = new THREE.BoxGeometry(0.16, 0.06, 0.25);
+  const footL = new THREE.Mesh(footGeo, clothMat);
+  footL.position.set(-0.18, -0.36, 0.04);
+  avGroup.add(footL);
+  const footR = new THREE.Mesh(footGeo, clothMat);
+  footR.position.set(0.18, -0.36, 0.04);
+  avGroup.add(footR);
+
+  // Center & lift the whole thing slightly
+  avGroup.position.y = -0.5;
+}
+
+function buildHair(headW, headH, headD, hairMat) {
+  const tipo = avatarTraits.pelo_tipo?.value || '';
+  const largo = avatarTraits.pelo_largo?.value || 'short';
+
+  if (tipo.includes('buzzcut')) {
+    // Tight skull cap
+    const capGeo = new THREE.SphereGeometry(1, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.scale.set(headW * 1.04, headH * 1.04, headD * 1.04);
+    cap.position.y = 2.16;
+    avGroup.add(cap);
+    return;
   }
-  // normal
-  return g === 'mujer'
-    ? 'M60,155 Q60,140 76,135 L124,135 Q140,140 140,155 L144,240 Q144,255 130,255 L70,255 Q56,255 56,240 Z'
-    : 'M58,155 Q58,140 75,135 L125,135 Q142,140 142,155 L146,240 Q146,255 131,255 L69,255 Q54,255 54,240 Z';
+
+  if (tipo.includes('afro')) {
+    // Big poofy sphere
+    const afroGeo = new THREE.SphereGeometry(1, 32, 32);
+    const afroPos = afroGeo.attributes.position;
+    // Add noise to make it look fluffy
+    for (let i = 0; i < afroPos.count; i++) {
+      const x = afroPos.getX(i);
+      const y = afroPos.getY(i);
+      const z = afroPos.getZ(i);
+      const n = (Math.sin(x * 8) + Math.cos(y * 8) + Math.sin(z * 8)) * 0.04;
+      afroPos.setX(i, x + n);
+      afroPos.setZ(i, z + n);
+    }
+    afroPos.needsUpdate = true;
+    afroGeo.computeVertexNormals();
+    const afro = new THREE.Mesh(afroGeo, hairMat);
+    afro.scale.set(headW * 1.7, headH * 1.45, headD * 1.7);
+    afro.position.y = 2.22;
+    avGroup.add(afro);
+    return;
+  }
+
+  // Top cap (covers top + sides + back of head)
+  const isCurly = tipo.includes('curly') || tipo.includes('coily');
+  const capGeo = new THREE.SphereGeometry(1, 48, 48, 0, Math.PI * 2, 0, Math.PI * 0.65);
+  if (isCurly) {
+    const p = capGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const n = (Math.sin(x * 12) + Math.cos(z * 12)) * 0.03;
+      p.setX(i, x + n);
+      p.setZ(i, z + n);
+    }
+    p.needsUpdate = true;
+    capGeo.computeVertexNormals();
+  }
+  const cap = new THREE.Mesh(capGeo, hairMat);
+  cap.scale.set(headW * 1.08, headH * 1.12, headD * 1.1);
+  cap.position.y = 2.18;
+  avGroup.add(cap);
+
+  const isLong = largo.includes('long') || largo.includes('past');
+  const isMedium = largo.includes('medium');
+
+  if (isLong || isMedium) {
+    // Hair falling behind shoulders
+    const length = isLong ? 1.0 : 0.55;
+    const baseR = headW * 1.05;
+    const tipR = isCurly ? baseR * 1.15 : baseR * 0.95;
+    const hairBackGeo = new THREE.CylinderGeometry(baseR, tipR, length, 20, 1, true);
+    if (isCurly) {
+      const p = hairBackGeo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), z = p.getZ(i);
+        const n = (Math.sin(p.getY(i) * 8 + x * 4) + Math.cos(z * 6)) * 0.025;
+        p.setX(i, x + n);
+        p.setZ(i, z + n);
+      }
+      p.needsUpdate = true;
+      hairBackGeo.computeVertexNormals();
+    }
+    const hairBackMat = new THREE.MeshStandardMaterial({
+      color: hairMat.color, roughness: 0.85, side: THREE.DoubleSide
+    });
+    const hairBack = new THREE.Mesh(hairBackGeo, hairBackMat);
+    hairBack.position.set(0, 2.16 - length / 2, -0.04);
+    hairBack.scale.set(1, 1, 0.7);
+    avGroup.add(hairBack);
+  }
+
+  // Front bangs / fringe for non-buzzcut
+  if (!tipo.includes('buzzcut')) {
+    const bangsGeo = new THREE.SphereGeometry(1, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.35);
+    const bangs = new THREE.Mesh(bangsGeo, hairMat);
+    bangs.scale.set(headW * 1.05, headH * 0.5, headD * 1.05);
+    bangs.position.set(0, 2.31, headD * 0.15);
+    avGroup.add(bangs);
+  }
 }
 
 function updateAvatar3D() {
-  const skinKey = avatarTraits.piel?.el?.dataset?.skin || '';
-  const skinColor = SKIN_COLORS[skinKey] || '#888';
-  const hairKey = avatarTraits.pelo_color?.el?.dataset?.hair || '';
-  const hairColor = HAIR_COLORS[hairKey] || '#333';
-  const eyeVal = avatarTraits.ojos?.value || '';
-  const eyeColor = EYE_COLORS[eyeVal] || '#4a3728';
+  if (!avInited) initAvatar3D();
+  buildHumanoid();
+}
 
-  // Skin
-  ['av-head', 'av-neck', 'av-ear-l', 'av-ear-r', 'av-hand-l', 'av-hand-r'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.setAttribute('fill', skinColor);
-  });
+// ── DRAG TO ROTATE ──────────────────────────────────────
+function initDragRotation() {
+  const canvas = document.getElementById('av3dCanvas');
+  if (!canvas || canvas._dragInit) return;
+  canvas._dragInit = true;
 
-  // Clothing
-  ['av-body', 'av-arm-l', 'av-arm-r'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.setAttribute('fill', '#2a2a2a');
-  });
+  let dragging = false, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
 
-  // Face shape
-  const faceKey = avatarTraits.rostro?.el?.dataset?.face || '';
-  const shape = FACE_SHAPES[faceKey] || { rx: 42, ry: 50 };
-  const head = document.getElementById('av-head');
-  if (head) {
-    head.setAttribute('rx', shape.rx);
-    head.setAttribute('ry', shape.ry);
-  }
-
-  // Hair
-  const hairType = getHairType();
-  const hairPathFn = HAIR_PATHS[hairType] || HAIR_PATHS.short;
-  const hairEl = document.getElementById('av-hair');
-  if (hairEl) { hairEl.setAttribute('d', hairPathFn()); hairEl.setAttribute('fill', hairColor); }
-
-  // Hair back
-  const hairBack = document.getElementById('av-hair-back');
-  if (hairBack) {
-    const isLong = hairType.startsWith('long') || hairType === 'afro';
-    if (isLong) {
-      hairBack.setAttribute('rx', hairType === 'afro' ? '55' : '30');
-      hairBack.setAttribute('ry', hairType === 'afro' ? '40' : '60');
-      hairBack.setAttribute('cy', hairType === 'afro' ? '75' : '140');
-      hairBack.setAttribute('fill', hairColor);
-      hairBack.setAttribute('opacity', '0.7');
-    } else {
-      hairBack.setAttribute('opacity', '0');
+  function onDown(x, y) {
+    dragging = true;
+    startX = x;
+    startY = y;
+    if (avGroup) {
+      startRotY = avGroup.rotation.y;
+      startRotX = avGroup.rotation.x;
     }
   }
+  function onMove(x, y) {
+    if (!dragging || !avGroup) return;
+    avGroup.rotation.y = startRotY + (x - startX) * 0.01;
+    avGroup.rotation.x = Math.max(-0.4, Math.min(0.4, startRotX + (y - startY) * 0.005));
+  }
+  function onUp() { dragging = false; }
 
-  // Eyes
-  const eyeL = document.getElementById('av-eye-l');
-  const eyeR = document.getElementById('av-eye-r');
-  if (eyeL) eyeL.setAttribute('fill', eyeColor);
-  if (eyeR) eyeR.setAttribute('fill', eyeColor);
-
-  // Body shape
-  const body = document.getElementById('av-body');
-  if (body) body.setAttribute('d', getBodyPath());
+  canvas.addEventListener('mousedown', e => { onDown(e.clientX, e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  window.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  window.addEventListener('touchend', onUp);
 }
 
 function updateAvatarPreview() {
