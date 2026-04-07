@@ -597,6 +597,23 @@ textarea { min-height: 90px; }
 .lstep.running { color: var(--accent); border-color: var(--accent); background: var(--block-peach); }
 .lstep.done { color: var(--muted); border-color: var(--border); background: none; }
 
+.n8n-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1.75rem;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.n8n-link:hover { border-color: var(--accent); transform: translateY(-1px); }
+
 /* ── SUCCESS ── */
 #successArea {
   display: none;
@@ -1414,6 +1431,7 @@ textarea { min-height: 90px; }
       <div class="lstep" id="ls5">05 — WAVESPEED sincronizando lipsync</div>
       <div class="lstep" id="ls6">06 — AIRTABLE guardando en library</div>
     </div>
+    <a class="n8n-link" href="https://n8n.prxy.studio/workflow/VcmwClkA1ArheMq5/executions" target="_blank" rel="noopener">↗ Ver ejecución en n8n</a>
   </div>
 
   <!-- Success -->
