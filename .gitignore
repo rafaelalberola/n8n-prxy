@@ -59,3 +59,6 @@ packages/cli/src/commands/export/outputs
 .claude/plans/
 lefthook-local.yml
 .playwright-mcp
+
+# Proprietary — paid product, contains API keys
+n8n_pipeline_v74.json
