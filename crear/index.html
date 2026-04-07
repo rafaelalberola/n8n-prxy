@@ -1392,10 +1392,31 @@ textarea { min-height: 90px; }
         <div class="chip" data-value="plano fijo, estático, contemplativo">⬜ Plano fijo</div>
       </div>
 
-      <div class="toggle-row" id="multishotToggle" onclick="toggleMultishot()">
+      <div class="section-title" style="font-family:inherit;font-size:20px;font-weight:700;letter-spacing:normal;text-transform:none;color:var(--text);margin-top:28px">Movimiento de cámara <span style="font-weight:400;font-size:13px;color:var(--dim)">· opcional · multi-selección</span></div>
+      <div class="chips" id="movimientos">
+        <div class="chip ms" data-value="push_in_slow">🎯 Push-in lento</div>
+        <div class="chip ms" data-value="pull_back_reveal">🔍 Pull-back reveal</div>
+        <div class="chip ms" data-value="orbit_left">↩ Orbit izquierda</div>
+        <div class="chip ms" data-value="orbit_right">↪ Orbit derecha</div>
+        <div class="chip ms" data-value="crane_up">⬆ Crane up</div>
+        <div class="chip ms" data-value="low_angle_rise">⬇⬆ Rise heroico</div>
+        <div class="chip ms" data-value="handheld_approach">📹 Handheld approach</div>
+        <div class="chip ms" data-value="lateral_tracking">⟷ Tracking lateral</div>
+      </div>
+      <div class="multishot-hint show" id="movHint" style="color:var(--dim)">Si eliges 2+, el sistema elegirá uno al azar en cada run. Deja vacío para cámara estática.</div>
+
+      <div class="toggle-row" id="multishotToggle" onclick="toggleMultishot()" style="margin-top:20px">
         <div class="toggle-info">
-          <span class="toggle-label">🎬 Multishot · 3 ángulos en el mismo clip</span>
-          <span class="toggle-sub">Cortes cinematográficos tipo director · sustituye la cámara de arriba</span>
+          <span class="toggle-label">🎬 Multishot cinematográfico · 3 cortes reales</span>
+          <span class="toggle-sub">Kling 3.0 genera 3 planos distintos con cortes en un solo clip. Anula los movimientos de cámara.</span>
+        </div>
+        <div class="toggle-switch"></div>
+      </div>
+
+      <div class="toggle-row active" id="subsToggle" onclick="toggleSubs()" style="margin-top:12px">
+        <div class="toggle-info">
+          <span class="toggle-label">📝 Quemar subtítulos dinámicos</span>
+          <span class="toggle-sub">2-3 palabras por bloque, lower third, estilo editorial Archivo Black.</span>
         </div>
         <div class="toggle-switch"></div>
       </div>
@@ -1663,14 +1684,59 @@ function applyDefaults() {
 const TOTAL_STEPS = 5;
 let currentStep = 1;
 
-const MULTISHOT_VALUE = 'multishot creative direction: 3 shots con ángulos distintos — shot 1: extreme close-up cara, shot 2: medium shot con contexto, shot 3: OTS o plano detalle. Cortes rápidos tipo director de cine. Cada shot con movimiento de cámara diferente.';
+// ── CAMERA MOVEMENTS CATALOG ─────────────────────────────
+// Each movement has a technical prompt that Kling obeys and an end-frame hint
+// that Claude uses to generate prompt_frame_fin correctly.
+const MOVIMIENTOS = {
+  push_in_slow: {
+    label: 'Push-in lento',
+    tech: 'Slow continuous dolly-in camera movement from medium shot to extreme close-up on the face. Smooth linear forward motion, constant speed, eye-level, subject remains centered. No cuts.',
+    end_frame: 'extreme close-up of the face, tight framing on eyes and mouth, same outfit and location, same lighting'
+  },
+  pull_back_reveal: {
+    label: 'Pull-back reveal',
+    tech: 'Slow continuous dolly-out camera movement from close-up to wide shot. Smooth linear backward motion, constant speed, subject stays centered while the full environment is progressively revealed. No cuts.',
+    end_frame: 'wide shot revealing the full environment around the subject, full body visible, same outfit and location, same lighting, environment clearly framing the subject'
+  },
+  orbit_left: {
+    label: 'Orbit izquierda',
+    tech: 'Smooth camera orbit around the subject, 40-degree arc moving from right to left around the subject. Constant distance, constant eye-level height, subject remains centered in frame. No cuts.',
+    end_frame: 'same subject viewed from a 40-degree left-rotated angle (3/4 profile from the subject right side), same framing distance, same outfit and location, same lighting'
+  },
+  orbit_right: {
+    label: 'Orbit derecha',
+    tech: 'Smooth camera orbit around the subject, 40-degree arc moving from left to right around the subject. Constant distance, constant eye-level height, subject remains centered in frame. No cuts.',
+    end_frame: 'same subject viewed from a 40-degree right-rotated angle (3/4 profile from the subject left side), same framing distance, same outfit and location, same lighting'
+  },
+  crane_up: {
+    label: 'Crane up',
+    tech: 'Smooth crane-up camera movement. Camera starts at chest level facing the subject and slowly rises vertically to a high angle looking down at the subject. Continuous vertical motion, no horizontal drift. No cuts.',
+    end_frame: 'high-angle shot looking down at the subject from above, subject visible from above the head, same outfit and location, same lighting'
+  },
+  low_angle_rise: {
+    label: 'Rise heroico',
+    tech: 'Camera starts at a very low angle looking up heroically at the subject, then slowly rises on a vertical path to eye-level. Continuous smooth vertical motion, dramatic heroic perspective shift. No cuts.',
+    end_frame: 'eye-level frontal medium shot of the subject, neutral angle, same outfit and location, same lighting'
+  },
+  handheld_approach: {
+    label: 'Handheld approach',
+    tech: 'Handheld camera style with natural subtle shake and organic micro-motion. Slow forward walking approach toward the subject, documentary feel. Natural imperfect motion, realistic. No cuts.',
+    end_frame: 'closer medium close-up of the subject, same outfit and location, same lighting, slightly off-center handheld framing'
+  },
+  lateral_tracking: {
+    label: 'Tracking lateral',
+    tech: 'Smooth lateral tracking shot. Camera slides horizontally from left to right at constant speed and constant distance to the subject. Subject remains centered in frame with parallax background movement. No cuts.',
+    end_frame: 'same subject viewed with same framing distance but from a horizontally-shifted camera position revealing a different angle of the background, same outfit and location, same lighting'
+  }
+};
 
 const S = {
   nombre_sujeto: '',
   genero: '',
   formato_video: '',
-  usar_frame_fin: false,
-  usar_multishot: false,
+  movimientos_camara: [],
+  usar_multishot_real: false,
+  quemar_subs: true,
   frame_fin_descripcion: '',
   localizacion: '',
   hora_dia: '',
@@ -1865,22 +1931,26 @@ document.querySelectorAll('.opts .opt').forEach(opt => {
   });
 });
 
-// ── CHIP SELECTION (single select) ────────────────────────
+// ── CHIP SELECTION ────────────────────────────────────────
+// Chips with class .ms are multi-select (movimientos de cámara)
+// All other chips are single-select
 document.querySelectorAll('.chips .chip').forEach(chip => {
   chip.addEventListener('click', function() {
     const group = this.parentElement;
     const key = group.id;
+
+    if (this.classList.contains('ms')) {
+      // Multi-select (movimientos_camara)
+      this.classList.toggle('selected');
+      const selected = [...group.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
+      S.movimientos_camara = selected;
+      return;
+    }
+
+    // Single-select (default)
     group.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
     this.classList.add('selected');
     S[key] = this.dataset.value;
-
-    // Selecting a manual camera chip turns multishot OFF
-    if (key === 'camara' && S.usar_multishot) {
-      const mt = document.getElementById('multishotToggle');
-      mt?.classList.remove('active');
-      S.usar_multishot = false;
-      S.usar_frame_fin = false;
-    }
   });
 });
 
@@ -1915,21 +1985,37 @@ function selectTemplate(idx) {
   });
 }
 
+// ── CAMERA MOVEMENT PICKER ────────────────────────────────
+function pickMovimiento() {
+  if (!S.movimientos_camara || !S.movimientos_camara.length) return null;
+  const key = S.movimientos_camara[Math.floor(Math.random() * S.movimientos_camara.length)];
+  const mov = MOVIMIENTOS[key];
+  if (!mov) return null;
+  return { key, ...mov };
+}
+
+// ── SUBS TOGGLE ───────────────────────────────────────────
+function toggleSubs() {
+  const t = document.getElementById('subsToggle');
+  const on = !t.classList.contains('active');
+  t.classList.toggle('active', on);
+  S.quemar_subs = on;
+}
+
 // ── MULTISHOT TOGGLE ──────────────────────────────────────
-// Una sola opción visible. Internamente activa frame_fin para que Kling
-// genere los cortes entre planos correctamente.
+// When ON: camera movement chips are cleared and ignored. Kling 3.0 will
+// generate 3 distinct shots with hard cuts via prefer_multi_shots.
 function toggleMultishot() {
   const toggle = document.getElementById('multishotToggle');
   const on = !toggle.classList.contains('active');
   toggle.classList.toggle('active', on);
-  S.usar_multishot = on;
-  S.usar_frame_fin = on;
+  S.usar_multishot_real = on;
+  const chipsGroup = document.getElementById('movimientos');
   if (on) {
-    document.querySelectorAll('#camara .chip').forEach(c => c.classList.remove('selected'));
-    S.camara = MULTISHOT_VALUE;
+    chipsGroup.querySelectorAll('.chip').forEach(c => { c.classList.remove('selected'); c.classList.add('disabled'); });
+    S.movimientos_camara = [];
   } else {
-    const def = document.querySelector('#camara .chip');
-    if (def) { def.classList.add('selected'); S.camara = def.dataset.value; }
+    chipsGroup.querySelectorAll('.chip').forEach(c => c.classList.remove('disabled'));
   }
 }
 
@@ -1947,7 +2033,9 @@ function buildSummary() {
     ['localización', S.localizacion?.split(',')[0] || '—'],
     ['luz', S.hora_dia?.split(',')[0] || '—'],
     ['visual', S.tono_visual?.split(',')[0] || '—'],
-    ['cámara', S.usar_multishot ? '🎬 Multishot (3 ángulos)' : (S.camara?.split(',')[0] || '—')],
+    ['cámara', S.camara?.split(',')[0] || '—'],
+    ['movimiento', S.usar_multishot_real ? '🎬 Multishot · 3 cortes reales' : (S.movimientos_camara?.length ? S.movimientos_camara.map(k => MOVIMIENTOS[k]?.label || k).join(' · ') + (S.movimientos_camara.length > 1 ? ' (aleatorio)' : '') : '— estático')],
+    ['subtítulos', S.quemar_subs ? '✓ activos' : '— desactivados'],
     ['producto', PRODUCTO ? PRODUCTO.substring(0, 70) + (PRODUCTO.length > 70 ? '…' : '') : '⚠ Sin definir — ve a ⚙ Configuración']
   ];
   grid.innerHTML = items.map(([k,v]) => `
@@ -2027,6 +2115,9 @@ function goBack() {
 async function submitForm() {
   if (!validate()) return;
 
+  const mov = S.usar_multishot_real ? null : pickMovimiento();
+  const modoVideo = S.usar_multishot_real ? 'multishot' : (mov ? 'movement' : 'static');
+
   const payload = {
     nombre_sujeto: S.nombre_sujeto,
     genero: S.genero,
@@ -2039,8 +2130,15 @@ async function submitForm() {
     producto: PRODUCTO,
     template_script: S.template_script,
     script_tts_override: S.script_custom || S.template_script,
-    usar_frame_fin: S.usar_frame_fin,
-    frame_fin_descripcion: '',
+    // Video mode: static | movement | multishot
+    modo_video: modoVideo,
+    // usar_frame_fin enables end_image_url in Kling (for movement anchor or multishot identity)
+    usar_frame_fin: !!mov || S.usar_multishot_real,
+    frame_fin_descripcion: mov?.end_frame || '',
+    movimiento_camara_key: mov?.key || '',
+    movimiento_camara_tech: mov?.tech || '',
+    movimientos_camara_opciones: S.movimientos_camara || [],
+    quemar_subs: S.quemar_subs,
     avatar_descripcion: S.avatar_descripcion
   };
 
